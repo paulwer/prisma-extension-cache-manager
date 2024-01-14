@@ -3,9 +3,12 @@ import { Prisma } from "@prisma/client/extension";
 import { Cache } from "cache-manager";
 
 export const REQUIRED_ARGS_OPERATIONS = [
+  "delete",
   "findUnique",
   "findUniqueOrThrow",
   "groupBy",
+  "update",
+  "upsert",
 ] as const satisfies ReadonlyArray<Operation>;
 export const OPTIONAL_ARGS_OPERATIONS = [
   "findMany",
@@ -49,8 +52,16 @@ export interface CacheOptions {
   ttl?: number;
 }
 
+export interface UncacheOptions {
+  /**
+   * Uncache keys
+   */
+  uncacheKeys: string[];
+}
+
 export interface PrismaCacheArgs {
   cache?: boolean | CacheOptions;
+  uncache?: UncacheOptions;
 }
 
 export interface PrismaRedisCacheConfig {

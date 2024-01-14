@@ -4,6 +4,7 @@ import {
   CacheOptions,
   ModelExtension,
   PrismaRedisCacheConfig,
+  UncacheOptions,
 } from "./types";
 
 export default ({ cache }: PrismaRedisCacheConfig) => {
@@ -18,17 +19,41 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          let result: any;
-          const useCache =
-            ["boolean", "object"].includes(typeof args["cache"]) &&
-            args["cache"] !== null &&
-            (CACHE_OPERATIONS as ReadonlyArray<string>).includes(operation);
-
-          if (!useCache) return query(args);
+          const isOperationSupported = (
+            CACHE_OPERATIONS as ReadonlyArray<string>
+          ).includes(operation);
 
           const queryArgs = {
             ...args,
           };
+
+          const useUncache =
+            typeof args["uncache"] === "object" &&
+            args["uncache"] !== null &&
+            isOperationSupported;
+
+          if (useUncache) {
+            delete queryArgs["uncache"];
+            const { uncacheKeys } = args[
+              "uncache"
+            ] as unknown as UncacheOptions;
+
+            if (uncacheKeys?.length > 0) {
+              await Promise.all(
+                uncacheKeys.map((key) =>
+                  cache.del(key).catch(() => Promise.resolve(true))
+                )
+              );
+            }
+          }
+
+          const useCache =
+            ["boolean", "object"].includes(typeof args["cache"]) &&
+            args["cache"] !== null &&
+            isOperationSupported;
+
+          if (!useCache) return query(args);
+
           delete queryArgs["cache"];
 
           if (typeof args["cache"] === "boolean") {
@@ -39,7 +64,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               return typeof cached === "string" ? JSON.parse(cached) : cached;
             }
 
-            result = await query(queryArgs);
+            const result = await query(queryArgs);
             await cache.set(cacheKey, JSON.stringify(result));
             return result;
           }
@@ -53,7 +78,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             return typeof cached === "string" ? JSON.parse(cached) : cached;
           }
 
-          result = await query(queryArgs);
+          const result = await query(queryArgs);
           const value = JSON.stringify(result);
 
           if (ttl) {
