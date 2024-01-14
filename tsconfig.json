@@ -7,7 +7,9 @@
     "moduleResolution": "Node",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
+    "declaration": true,
     "noUnusedParameters": true,
+    "outDir": "./dist",
     "paths": {
       "~/*": ["./src/*"]
     },

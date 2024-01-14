@@ -10,7 +10,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
-      cache: { store: cache },
+      $cache: cache,
     },
     model: {
       $allModels: {} as ModelExtension,
