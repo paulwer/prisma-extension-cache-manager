@@ -4,7 +4,6 @@ import {
   CacheOptions,
   ModelExtension,
   PrismaRedisCacheConfig,
-  UncacheOptions,
 } from "./types";
 import { createHash } from "crypto";
 
@@ -45,13 +44,11 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           if (useUncache) {
             delete queryArgs["uncache"];
-            const { uncacheKeys } = args[
-              "uncache"
-            ] as unknown as UncacheOptions;
+            const keys = args["uncache"] as unknown as string[];
 
-            if (uncacheKeys?.length > 0) {
+            if (keys?.length > 0) {
               await Promise.all(
-                uncacheKeys.map((key) =>
+                keys.map((key) =>
                   cache.del(key).catch(() => Promise.resolve(true))
                 )
               );

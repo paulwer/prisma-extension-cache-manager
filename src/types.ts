@@ -9,6 +9,7 @@ export const REQUIRED_ARGS_OPERATIONS = [
   "groupBy",
   "update",
   "upsert",
+  "create",
 ] as const satisfies ReadonlyArray<Operation>;
 export const OPTIONAL_ARGS_OPERATIONS = [
   "findMany",
@@ -52,16 +53,9 @@ export interface CacheOptions {
   ttl?: number;
 }
 
-export interface UncacheOptions {
-  /**
-   * Uncache keys
-   */
-  uncacheKeys: string[];
-}
-
 export interface PrismaCacheArgs {
   cache?: boolean | CacheOptions;
-  uncache?: UncacheOptions;
+  uncache?: string[];
 }
 
 export interface PrismaRedisCacheConfig {
