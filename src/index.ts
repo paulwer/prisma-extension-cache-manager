@@ -39,7 +39,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           function processUncache(result: unknown) {
             const option = uncacheOption as any;
-            let keysToDelete = [];
+            let keysToDelete: string[] = [];
 
             if (typeof option === "function") {
               const keys = option(result);
@@ -50,13 +50,12 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               keysToDelete = option;
             }
 
-            if (!keysToDelete.length) return;
+            if (!keysToDelete.length) return true;
 
-            return Promise.all(
-              keysToDelete.map((key) =>
-                cache.del(key).catch(() => Promise.resolve(true))
-              )
-            );
+            return cache.store
+              .mdel(...keysToDelete)
+              .then(() => true)
+              .catch(() => false);
           }
 
           const useCache =
