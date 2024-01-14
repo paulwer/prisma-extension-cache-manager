@@ -1,6 +1,6 @@
 {
   "name": "@knaus94/prisma-extension-cache-manager",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/knaus94/prisma-extension-cache-manager.git"
@@ -17,24 +17,9 @@
     "cache-manager",
     "cache"
   ],
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./package.json": "./package.json"
-  },
-  "typesVersions": {
-    "*": {}
-  },
   "files": [
-    "dist/**/*",
     "LICENSE",
-    "README.md"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
