@@ -6,6 +6,17 @@ import {
   PrismaRedisCacheConfig,
   UncacheOptions,
 } from "./types";
+import { createHash } from "crypto";
+
+function generateComposedKey(options: {
+  model: string;
+  queryArgs: any;
+}): string {
+  const hash = createHash("md5")
+    .update(JSON.stringify(options?.queryArgs))
+    .digest("hex");
+  return `prisma-${options.model}@${hash}`;
+}
 
 export default ({ cache }: PrismaRedisCacheConfig) => {
   return Prisma.defineExtension({
@@ -57,7 +68,10 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           delete queryArgs["cache"];
 
           if (typeof args["cache"] === "boolean") {
-            const cacheKey = `prisma-${model}-${JSON.stringify(queryArgs)}`;
+            const cacheKey = generateComposedKey({
+              model,
+              queryArgs,
+            });
             const cached = await cache.get(cacheKey);
 
             if (cached) {
@@ -71,7 +85,11 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           const { key, ttl } = args["cache"] as unknown as CacheOptions;
           const customCacheKey =
-            key || `prisma-custom-${model}-${JSON.stringify(queryArgs)}`;
+            key ||
+            generateComposedKey({
+              model,
+              queryArgs,
+            });
           const cached = await cache.get(customCacheKey);
 
           if (cached) {
