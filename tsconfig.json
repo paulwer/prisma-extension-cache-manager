@@ -1,23 +1,23 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
+    "module": "CommonJS",
     "declaration": true,
-    "noUnusedParameters": true,
-    "outDir": "./dist",
-    "paths": {
-      "~/*": ["./src/*"]
-    },
-    "resolveJsonModule": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ESNext",
     "sourceMap": true,
-    "strict": true,
-    "target": "ESNext"
-  },
-  "include": ["./src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+  }
 }
