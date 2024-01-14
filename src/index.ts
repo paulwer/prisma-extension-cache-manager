@@ -5,6 +5,7 @@ import {
   PrismaRedisCacheConfig,
 } from "./types";
 import { createHash } from "crypto";
+import { Operation } from "@prisma/client/runtime/library";
 
 function generateComposedKey(options: {
   model: string;
@@ -117,9 +118,19 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               queryArgs,
             });
 
-          const cached = await cache.get(customCacheKey);
-          if (cached) {
-            return typeof cached === "string" ? JSON.parse(cached) : cached;
+          if (
+            !(
+              [
+                "create",
+                "upsert",
+                "update",
+              ] as ReadonlyArray<Operation> as string[]
+            ).includes(operation)
+          ) {
+            const cached = await cache.get(customCacheKey);
+            if (cached) {
+              return typeof cached === "string" ? JSON.parse(cached) : cached;
+            }
           }
 
           const result = await query(queryArgs);
