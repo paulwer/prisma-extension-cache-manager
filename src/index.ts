@@ -60,7 +60,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             args["cache"] !== null &&
             isOperationSupported;
 
-          if (!useCache) return query(args);
+          if (!useCache) return query(queryArgs);
 
           delete queryArgs["cache"];
 

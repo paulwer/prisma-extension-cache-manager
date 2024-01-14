@@ -1,6 +1,6 @@
 {
   "name": "@knaus94/prisma-extension-cache-manager",
-  "version": "1.0.13",
+  "version": "1.0.15",
   "repository": {
     "type": "git",
     "url": "https://github.com/knaus94/prisma-extension-cache-manager.git"
