@@ -1,0 +1,111 @@
+{
+  "name": "@knaus94/prisma-extension-cache-manager",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/@knaus94/prisma-extension-cache-manager.git"
+  },
+  "homepage": "https://github.com/@knaus94/prisma-extension-cache-manager",
+  "bugs": "https://github.com/@knaus94/prisma-extension-cache-manager/issues",
+  "author": {
+    "name": "knaus94",
+    "url": "https://github.com/knaus94"
+  },
+  "keywords": [
+    "prisma",
+    "extension",
+    "cache-manager",
+    "cache"
+  ],
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {}
+  },
+  "files": [
+    "dist/**/*",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "format": "prettier --write .",
+    "semantic-release": "semantic-release",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "conventional-changelog-conventionalcommits": "^7.0.2",
+    "prettier": "^3.1.1",
+    "semantic-release": "^22.0.12",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits",
+          "releaseRules": [
+            {
+              "type": "build",
+              "scope": "deps",
+              "release": "patch"
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "conventionalcommits",
+          "presetConfig": {
+            "types": [
+              {
+                "type": "feat",
+                "section": "Features"
+              },
+              {
+                "type": "fix",
+                "section": "Bug Fixes"
+              },
+              {
+                "type": "docs",
+                "section": "Documentation Changes"
+              },
+              {
+                "type": "build",
+                "section": "Dependencies and Other Build Updates",
+                "hidden": false
+              }
+            ]
+          }
+        }
+      ],
+      "@semantic-release/npm",
+      "@semantic-release/github"
+    ]
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "cache-manager": "^5.2.1"
+  }
+}
