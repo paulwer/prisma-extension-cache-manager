@@ -28,12 +28,12 @@ type OptionalArgsOperation = (typeof OPTIONAL_ARGS_OPERATIONS)[number];
 
 type RequiredArgsFunction<O extends RequiredArgsOperation> = <T, A>(
   this: T,
-  args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs>
+  args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>
 ) => Promise<Prisma.Result<T, A, O>>;
 
 type OptionalArgsFunction<O extends OptionalArgsOperation> = <T, A>(
   this: T,
-  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs>
+  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>
 ) => Promise<Prisma.Result<T, A, O>>;
 
 export type ModelExtension = {
@@ -42,20 +42,31 @@ export type ModelExtension = {
   [O2 in OptionalArgsOperation]: OptionalArgsFunction<O2>;
 };
 
-export interface CacheOptions {
+export interface CacheOptions<
+  T,
+  A,
+  O extends RequiredArgsOperation | OptionalArgsOperation,
+> {
   /**
    * Cache key
    */
-  key: string;
+  key: ((result: Prisma.Result<T, A, O>) => string) | string;
   /**
    * Time to live
    */
   ttl?: number;
 }
 
-export interface PrismaCacheArgs {
-  cache?: boolean | CacheOptions;
-  uncache?: string[];
+export interface PrismaCacheArgs<
+  T,
+  A,
+  O extends RequiredArgsOperation | OptionalArgsOperation,
+> {
+  cache?: boolean | CacheOptions<T, A, O>;
+  uncache?:
+    | ((result: Prisma.Result<T, A, O>) => string[] | string)
+    | string
+    | string[];
 }
 
 export interface PrismaRedisCacheConfig {

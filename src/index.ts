@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client/extension";
 import {
   CACHE_OPERATIONS,
-  CacheOptions,
   ModelExtension,
   PrismaRedisCacheConfig,
 } from "./types";
@@ -14,7 +13,7 @@ function generateComposedKey(options: {
   const hash = createHash("md5")
     .update(JSON.stringify(options?.queryArgs))
     .digest("hex");
-  return `prisma-${options.model}@${hash}`;
+  return `Prisma@${options.model}@${hash}`;
 }
 
 export default ({ cache }: PrismaRedisCacheConfig) => {
@@ -29,42 +28,55 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          const isOperationSupported = (
-            CACHE_OPERATIONS as ReadonlyArray<string>
-          ).includes(operation);
+          if (!(CACHE_OPERATIONS as ReadonlyArray<string>).includes(operation))
+            return query(args);
 
-          const queryArgs = {
-            ...args,
-          };
+          const {
+            cache: cacheOption,
+            uncache: uncacheOption,
+            ...queryArgs
+          } = args;
 
-          const useUncache =
-            typeof args["uncache"] === "object" &&
-            args["uncache"] !== null &&
-            isOperationSupported;
+          function processUncache(result: unknown) {
+            const option = uncacheOption as any;
+            let keysToDelete = [];
 
-          if (useUncache) {
-            delete queryArgs["uncache"];
-            const keys = args["uncache"] as unknown as string[];
-
-            if (keys?.length > 0) {
-              await Promise.all(
-                keys.map((key) =>
-                  cache.del(key).catch(() => Promise.resolve(true))
-                )
-              );
+            if (typeof option === "function") {
+              const keys = option(result);
+              keysToDelete = Array.isArray(keys) ? keys : [keys];
+            } else if (typeof option === "string") {
+              keysToDelete = [option];
+            } else if (Array.isArray(option)) {
+              keysToDelete = option;
             }
+
+            if (!keysToDelete.length) return;
+
+            return Promise.all(
+              keysToDelete.map((key) =>
+                cache.del(key).catch(() => Promise.resolve(true))
+              )
+            );
           }
 
           const useCache =
-            ["boolean", "object"].includes(typeof args["cache"]) &&
-            args["cache"] !== null &&
-            isOperationSupported;
+            cacheOption !== undefined &&
+            ["boolean", "object"].includes(typeof cacheOption);
 
-          if (!useCache) return query(queryArgs);
+          const useUncache =
+            uncacheOption !== undefined &&
+            (typeof uncacheOption === "function" ||
+              typeof uncacheOption === "string" ||
+              Array.isArray(uncacheOption));
 
-          delete queryArgs["cache"];
+          if (!useCache) {
+            const result = await query(queryArgs);
+            if (useUncache) processUncache(result);
 
-          if (typeof args["cache"] === "boolean") {
+            return result;
+          }
+
+          if (typeof cacheOption === "boolean") {
             const cacheKey = generateComposedKey({
               model,
               queryArgs,
@@ -76,24 +88,44 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             }
 
             const result = await query(queryArgs);
+            if (useUncache) processUncache(result);
+
             await cache.set(cacheKey, JSON.stringify(result));
             return result;
           }
 
-          const { key, ttl } = args["cache"] as unknown as CacheOptions;
+          const { key, ttl } = cacheOption as any;
+
+          if (typeof key === "function") {
+            const result = await query(queryArgs);
+            if (useUncache) processUncache(result);
+            const customCacheKey = key(result);
+            const value = JSON.stringify(result);
+
+            if (ttl) {
+              await cache.set(customCacheKey, value, ttl);
+            } else {
+              await cache.set(customCacheKey, value);
+            }
+
+            return result;
+          }
+
           const customCacheKey =
             key ||
             generateComposedKey({
               model,
               queryArgs,
             });
-          const cached = await cache.get(customCacheKey);
 
+          const cached = await cache.get(customCacheKey);
           if (cached) {
             return typeof cached === "string" ? JSON.parse(cached) : cached;
           }
 
           const result = await query(queryArgs);
+          if (useUncache) processUncache(result);
+
           const value = JSON.stringify(result);
 
           if (ttl) {
