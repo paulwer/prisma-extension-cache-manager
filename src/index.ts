@@ -32,6 +32,14 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           if (!(CACHE_OPERATIONS as ReadonlyArray<string>).includes(operation))
             return query(args);
 
+          const isCreateOperation = (
+            [
+              "create",
+              "upsert",
+              "update",
+            ] as ReadonlyArray<Operation> as string[]
+          ).includes(operation);
+
           const {
             cache: cacheOption,
             uncache: uncacheOption,
@@ -81,10 +89,13 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               model,
               queryArgs,
             });
-            const cached = await cache.get(cacheKey);
 
-            if (cached) {
-              return typeof cached === "string" ? JSON.parse(cached) : cached;
+            if (!isCreateOperation) {
+              const cached = await cache.get(cacheKey);
+
+              if (cached) {
+                return typeof cached === "string" ? JSON.parse(cached) : cached;
+              }
             }
 
             const result = await query(queryArgs);
@@ -118,15 +129,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               queryArgs,
             });
 
-          if (
-            !(
-              [
-                "create",
-                "upsert",
-                "update",
-              ] as ReadonlyArray<Operation> as string[]
-            ).includes(operation)
-          ) {
+          if (!isCreateOperation) {
             const cached = await cache.get(customCacheKey);
             if (cached) {
               return typeof cached === "string" ? JSON.parse(cached) : cached;
