@@ -62,7 +62,7 @@ export interface PrismaCacheArgs<
   A,
   O extends RequiredArgsOperation | OptionalArgsOperation,
 > {
-  cache?: boolean | CacheOptions<T, A, O>;
+  cache?: boolean | number | CacheOptions<T, A, O>;
   uncache?:
     | ((result: Prisma.Result<T, A, O>) => string[] | string)
     | string

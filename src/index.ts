@@ -69,7 +69,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           const useCache =
             cacheOption !== undefined &&
-            ["boolean", "object"].includes(typeof cacheOption);
+            ["boolean", "object", "number"].includes(typeof cacheOption);
 
           const useUncache =
             uncacheOption !== undefined &&
@@ -84,7 +84,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             return result;
           }
 
-          if (typeof cacheOption === "boolean") {
+          if (["boolean", "number"].includes(typeof cacheOption)) {
             const cacheKey = generateComposedKey({
               model,
               queryArgs,
@@ -100,7 +100,11 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
-            await cache.set(cacheKey, JSON.stringify(result));
+            await cache.set(
+              cacheKey,
+              JSON.stringify(result),
+              typeof cacheOption === "number" ? cacheOption : undefined
+            );
 
             return result;
           }
