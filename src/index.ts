@@ -100,7 +100,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
               const cached = await cache.get(cacheKey);
               if (cached) {
                 if (isBinarySerialize) {
-                  return bsonSerialize(Buffer.from(cached as any));
+                  return bsonSerialize(Buffer.from(cached as any, 'base64'));
                 }
 
                 return typeof cached === "string" ? JSON.parse(cached) : cached;
@@ -114,7 +114,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
             if (isBinarySerialize) {
               await cache.set(
                 cacheKey,
-                Buffer.from(bsonSerialize(result as any)),
+                Buffer.from(bsonSerialize(result as any)).toString('base64'),
                 ttl
               );
             } else {
@@ -134,7 +134,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
             if (isBinarySerialize) {
               await cache.set(
                 customCacheKey,
-                Buffer.from(bsonSerialize(result as any)),
+                Buffer.from(bsonSerialize(result as any)).toString('base64'),
                 ttl
               );
             } else {
@@ -155,7 +155,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
             const cached = await cache.get(customCacheKey);
             if (cached) {
               if (isBinarySerialize) {
-                return bsonDeserialize(Buffer.from(cached as any));
+                return bsonDeserialize(Buffer.from(cached as any, 'base64'));
               }
 
               return typeof cached === "string" ? JSON.parse(cached) : cached;
@@ -167,7 +167,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
           if (isBinarySerialize) {
             await cache.set(
               customCacheKey,
-              Buffer.from(bsonSerialize(result as any)),
+              Buffer.from(bsonSerialize(result as any)).toString('base64'),
               ttl
             );
           } else {
