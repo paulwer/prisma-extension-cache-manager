@@ -6,14 +6,13 @@ import {
 } from "./types";
 import { createHash } from "crypto";
 import { Operation } from "@prisma/client/runtime/library";
-import * as serialize from "serialize-javascript";
 
 function generateComposedKey(options: {
   model: string;
   queryArgs: any;
 }): string {
   const hash = createHash("md5")
-    .update(serialize(options?.queryArgs))
+    .update(JSON.stringify(options?.queryArgs))
     .digest("hex");
   return `Prisma@${options.model}@${hash}`;
 }
