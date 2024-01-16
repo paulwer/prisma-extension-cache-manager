@@ -6,10 +6,7 @@ import {
 } from "./types";
 import { createHash } from "crypto";
 import { Operation } from "@prisma/client/runtime/library";
-import {
-  serialize as bsonSerialize,
-  deserialize as bsonDeserialize,
-} from "bson";
+import { BSON } from 'bson';
 
 function generateComposedKey(options: {
   model: string;
@@ -22,13 +19,13 @@ function generateComposedKey(options: {
 }
 
 function serializeData(data: any) {
-  const serializedResult = bsonSerialize({ data });
+  const serializedResult = BSON.serialize({ data });
   return Buffer.from(serializedResult).toString("base64");
 }
 
 function deserializeData(data: any) {
   const binaryData = Buffer.from(data, "base64");
-  return bsonDeserialize(binaryData).data;
+  return BSON.deserialize(binaryData).data;
 }
 
 export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
