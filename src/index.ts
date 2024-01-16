@@ -32,7 +32,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           if (!(CACHE_OPERATIONS as ReadonlyArray<string>).includes(operation))
             return query(args);
 
-          const isCreateOperation = (
+          const isWriteOperation = (
             [
               "create",
               "upsert",
@@ -90,7 +90,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               queryArgs,
             });
 
-            if (!isCreateOperation) {
+            if (!isWriteOperation) {
               const cached = await cache.get(cacheKey);
 
               if (cached) {
@@ -100,8 +100,8 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
-
             await cache.set(cacheKey, JSON.stringify(result));
+
             return result;
           }
 
@@ -110,14 +110,9 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           if (typeof key === "function") {
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
-            const customCacheKey = key(result);
-            const value = JSON.stringify(result);
 
-            if (ttl) {
-              await cache.set(customCacheKey, value, ttl);
-            } else {
-              await cache.set(customCacheKey, value);
-            }
+            const customCacheKey = key(result);
+            await cache.set(customCacheKey, JSON.stringify(result), ttl);
 
             return result;
           }
@@ -129,7 +124,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               queryArgs,
             });
 
-          if (!isCreateOperation) {
+          if (!isWriteOperation) {
             const cached = await cache.get(customCacheKey);
             if (cached) {
               return typeof cached === "string" ? JSON.parse(cached) : cached;
@@ -138,14 +133,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           const result = await query(queryArgs);
           if (useUncache) processUncache(result);
-
-          const value = JSON.stringify(result);
-
-          if (ttl) {
-            await cache.set(customCacheKey, value, ttl);
-          } else {
-            await cache.set(customCacheKey, value);
-          }
+          await cache.set(customCacheKey, JSON.stringify(result), ttl);
 
           return result;
         },
