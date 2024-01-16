@@ -6,24 +6,24 @@ import {
 } from "./types";
 import { createHash } from "crypto";
 import { Operation } from "@prisma/client/runtime/library";
-import flatted from "flatted";
+import * as serialize from "serialize-javascript";
 
 function generateComposedKey(options: {
   model: string;
   queryArgs: any;
 }): string {
   const hash = createHash("md5")
-    .update(JSON.stringify(options?.queryArgs))
+    .update(serialize(options?.queryArgs))
     .digest("hex");
   return `Prisma@${options.model}@${hash}`;
 }
 
-function serializeData(data: any) {
-  return flatted.stringify({ data });
+function serializeData(data) {
+  return JSON.stringify({ data });
 }
 
-function deserializeData(value: any) {
-  return flatted.parse(value).data;
+function deserializeData(serializedData) {
+  return JSON.parse(serializedData).data;
 }
 
 export default ({ cache }: PrismaRedisCacheConfig) => {
