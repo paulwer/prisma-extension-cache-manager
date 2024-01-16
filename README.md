@@ -28,7 +28,7 @@ async function main() {
     max: 200,
   });
   const prisma = new PrismaClient().$extends(
-    cacheExtension({ cache, serialize: "binary" })
+    cacheExtension({ cache })
   );
   await prisma.user.findUniqueOrThrow({
     where: {

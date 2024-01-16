@@ -6,7 +6,7 @@ import {
 } from "./types";
 import { createHash } from "crypto";
 import { Operation } from "@prisma/client/runtime/library";
-import { BSON } from 'bson';
+import flatted from "flatted";
 
 function generateComposedKey(options: {
   model: string;
@@ -19,16 +19,14 @@ function generateComposedKey(options: {
 }
 
 function serializeData(data: any) {
-  const serializedResult = BSON.serialize({ data });
-  return Buffer.from(serializedResult).toString("base64");
+  return flatted.stringify({ data });
 }
 
-function deserializeData(data: any) {
-  const binaryData = Buffer.from(data, "base64");
-  return BSON.deserialize(binaryData).data;
+function deserializeData(value: any) {
+  return flatted.parse(value).data;
 }
 
-export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
+export default ({ cache }: PrismaRedisCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
@@ -50,8 +48,6 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
               "update",
             ] as ReadonlyArray<Operation> as string[]
           ).includes(operation);
-
-          const isBinarySerialize = serialize === "binary";
 
           const {
             cache: cacheOption,
@@ -106,11 +102,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
             if (!isWriteOperation) {
               const cached = await cache.get(cacheKey);
               if (cached) {
-                if (isBinarySerialize) {
-                  return deserializeData(cached);
-                }
-
-                return typeof cached === "string" ? JSON.parse(cached) : cached;
+                return deserializeData(cached);
               }
             }
 
@@ -118,13 +110,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
             if (useUncache) processUncache(result);
             const ttl =
               typeof cacheOption === "number" ? cacheOption : undefined;
-            await cache.set(
-              cacheKey,
-              isBinarySerialize
-                ? serializeData(result)
-                : JSON.stringify(result),
-              ttl
-            );
+            await cache.set(cacheKey, serializeData(result), ttl);
 
             return result;
           }
@@ -136,13 +122,7 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
             if (useUncache) processUncache(result);
 
             const customCacheKey = key(result);
-            await cache.set(
-              customCacheKey,
-              isBinarySerialize
-                ? serializeData(result)
-                : JSON.stringify(result),
-              ttl
-            );
+            await cache.set(customCacheKey, serializeData(result), ttl);
 
             return result;
           }
@@ -157,21 +137,13 @@ export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
           if (!isWriteOperation) {
             const cached = await cache.get(customCacheKey);
             if (cached) {
-              if (isBinarySerialize) {
-                return deserializeData(cached);
-              }
-
-              return typeof cached === "string" ? JSON.parse(cached) : cached;
+              return deserializeData(cached);
             }
           }
 
           const result = await query(queryArgs);
           if (useUncache) processUncache(result);
-          await cache.set(
-            customCacheKey,
-            isBinarySerialize ? serializeData(result) : JSON.stringify(result),
-            ttl
-          );
+          await cache.set(customCacheKey, serializeData(result), ttl);
 
           return result;
         },
