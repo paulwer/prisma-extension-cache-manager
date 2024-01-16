@@ -54,7 +54,7 @@ async function main() {
   });
   await prisma.user.create({
     data: {},
-    unchace: `user_count`, // delete key from cache
+    uncache: `user_count`, // delete key from cache
   });
   await prisma.user.create({
     data: {},
@@ -62,7 +62,7 @@ async function main() {
       ttl: 2000,
       key: (result) => `user-${user.id}`, // custom cache key by result (There will be no reading from the cache, only a write down)
     },
-    unchace: [`user_count`, `users`], // delete keys from cache
+    uncache: [`user_count`, `users`], // delete keys from cache
   });
 }
 
