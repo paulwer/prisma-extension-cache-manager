@@ -6,7 +6,6 @@ A caching extension for [Prisma](https://www.prisma.io/), compatible with [cache
 
 - [cache-manager](https://www.npmjs.com/package/cache-manager) compatibility
 - Only model queries can be cacheable (no $query or $queryRaw)
-- In-memory cache is recommended, since types like Date or Prisma.Decimal would be lost if using JSON serialization (maybe will try to use some binary serialization in the future)
 
 ## Installation
 
@@ -28,7 +27,9 @@ async function main() {
     ttl: 10000,
     max: 200,
   });
-  const prisma = new PrismaClient().$extends(cacheExtension({ cache }));
+  const prisma = new PrismaClient().$extends(
+    cacheExtension({ cache, serialize: "binary" })
+  );
   await prisma.user.findUniqueOrThrow({
     where: {
       email: user.email,

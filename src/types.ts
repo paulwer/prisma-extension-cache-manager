@@ -71,4 +71,5 @@ export interface PrismaCacheArgs<
 
 export interface PrismaRedisCacheConfig {
   cache: Cache;
+  serialize: "json" | "binary";
 }

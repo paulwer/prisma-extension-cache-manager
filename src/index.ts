@@ -6,6 +6,10 @@ import {
 } from "./types";
 import { createHash } from "crypto";
 import { Operation } from "@prisma/client/runtime/library";
+import {
+  serialize as bsonSerialize,
+  deserialize as bsonDeserialize,
+} from "bson";
 
 function generateComposedKey(options: {
   model: string;
@@ -17,7 +21,7 @@ function generateComposedKey(options: {
   return `Prisma@${options.model}@${hash}`;
 }
 
-export default ({ cache }: PrismaRedisCacheConfig) => {
+export default ({ cache, serialize }: PrismaRedisCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
@@ -39,6 +43,8 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
               "update",
             ] as ReadonlyArray<Operation> as string[]
           ).includes(operation);
+
+          const isBinarySerialize = serialize === "binary";
 
           const {
             cache: cacheOption,
@@ -92,19 +98,28 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
             if (!isWriteOperation) {
               const cached = await cache.get(cacheKey);
-
               if (cached) {
+                if (isBinarySerialize) {
+                  return bsonSerialize(Buffer.from(cached as any));
+                }
+
                 return typeof cached === "string" ? JSON.parse(cached) : cached;
               }
             }
 
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
-            await cache.set(
-              cacheKey,
-              JSON.stringify(result),
-              typeof cacheOption === "number" ? cacheOption : undefined
-            );
+            const ttl =
+              typeof cacheOption === "number" ? cacheOption : undefined;
+            if (isBinarySerialize) {
+              await cache.set(
+                cacheKey,
+                Buffer.from(bsonSerialize(result as any)),
+                ttl
+              );
+            } else {
+              await cache.set(cacheKey, JSON.stringify(result), ttl);
+            }
 
             return result;
           }
@@ -116,7 +131,15 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             if (useUncache) processUncache(result);
 
             const customCacheKey = key(result);
-            await cache.set(customCacheKey, JSON.stringify(result), ttl);
+            if (isBinarySerialize) {
+              await cache.set(
+                customCacheKey,
+                Buffer.from(bsonSerialize(result as any)),
+                ttl
+              );
+            } else {
+              await cache.set(customCacheKey, JSON.stringify(result), ttl);
+            }
 
             return result;
           }
@@ -131,13 +154,25 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           if (!isWriteOperation) {
             const cached = await cache.get(customCacheKey);
             if (cached) {
+              if (isBinarySerialize) {
+                return bsonDeserialize(Buffer.from(cached as any));
+              }
+
               return typeof cached === "string" ? JSON.parse(cached) : cached;
             }
           }
 
           const result = await query(queryArgs);
           if (useUncache) processUncache(result);
-          await cache.set(customCacheKey, JSON.stringify(result), ttl);
+          if (isBinarySerialize) {
+            await cache.set(
+              customCacheKey,
+              Buffer.from(bsonSerialize(result as any)),
+              ttl
+            );
+          } else {
+            await cache.set(customCacheKey, JSON.stringify(result), ttl);
+          }
 
           return result;
         },
