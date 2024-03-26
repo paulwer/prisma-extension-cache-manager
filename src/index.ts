@@ -14,7 +14,11 @@ function generateComposedKey(options: {
   const hash = createHash("md5")
     .update(JSON.stringify(options?.queryArgs))
     .digest("hex");
-  return `Prisma@${options.model}@${hash}`;
+  return `${options.model}@${hash}`;
+}
+
+function createKey(key: string, namespace?: string): string {
+  return namespace ? `${namespace}:${key}` : key;
 }
 
 function serializeData(data) {
@@ -43,6 +47,8 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           const isWriteOperation = (
             [
               "create",
+              "createMany",
+              "updateMany",
               "upsert",
               "update",
             ] as ReadonlyArray<Operation> as string[]
@@ -52,9 +58,9 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             cache: cacheOption,
             uncache: uncacheOption,
             ...queryArgs
-          } = args;
+          } = args as any;
 
-          function processUncache(result: unknown) {
+          function processUncache(result: any) {
             const option = uncacheOption as any;
             let keysToDelete: string[] = [];
 
@@ -64,7 +70,13 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             } else if (typeof option === "string") {
               keysToDelete = [option];
             } else if (Array.isArray(option)) {
-              keysToDelete = option;
+              if (typeof option[0] === "string") {
+                keysToDelete = option;
+              } else if (typeof option[0] === "object") {
+                keysToDelete = option.map((obj) =>
+                  obj.namespace ? `${obj.namespace}:${obj.key}` : obj.key
+                );
+              }
             }
 
             if (!keysToDelete.length) return true;
@@ -77,7 +89,9 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           const useCache =
             cacheOption !== undefined &&
-            ["boolean", "object", "number"].includes(typeof cacheOption);
+            ["boolean", "object", "number", "string"].includes(
+              typeof cacheOption
+            );
 
           const useUncache =
             uncacheOption !== undefined &&
@@ -92,11 +106,14 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             return result;
           }
 
-          if (["boolean", "number"].includes(typeof cacheOption)) {
-            const cacheKey = generateComposedKey({
-              model,
-              queryArgs,
-            });
+          if (["boolean", "number", "string"].includes(typeof cacheOption)) {
+            const cacheKey =
+              typeof cacheOption === "string"
+                ? cacheOption
+                : generateComposedKey({
+                    model,
+                    queryArgs,
+                  });
 
             if (!isWriteOperation) {
               const cached = await cache.get(cacheKey);
@@ -114,20 +131,22 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             return result;
           }
 
-          const { key, ttl } = cacheOption as any;
-
-          if (typeof key === "function") {
+          if (typeof cacheOption.key === "function") {
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
 
-            const customCacheKey = key(result);
-            await cache.set(customCacheKey, serializeData(result), ttl);
+            const customCacheKey = cacheOption.key(result);
+            await cache.set(
+              customCacheKey,
+              serializeData(result),
+              cacheOption.ttl
+            );
 
             return result;
           }
 
           const customCacheKey =
-            key ||
+            createKey(cacheOption.key, cacheOption.namespace) ||
             generateComposedKey({
               model,
               queryArgs,
@@ -142,7 +161,11 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
 
           const result = await query(queryArgs);
           if (useUncache) processUncache(result);
-          await cache.set(customCacheKey, serializeData(result), ttl);
+          await cache.set(
+            customCacheKey,
+            serializeData(result),
+            cacheOption.ttl
+          );
 
           return result;
         },

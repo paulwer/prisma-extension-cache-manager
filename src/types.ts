@@ -10,6 +10,8 @@ export const REQUIRED_ARGS_OPERATIONS = [
   "update",
   "upsert",
   "create",
+  "createMany",
+  "updateMany",
 ] as const satisfies ReadonlyArray<Operation>;
 export const OPTIONAL_ARGS_OPERATIONS = [
   "findMany",
@@ -28,12 +30,12 @@ type OptionalArgsOperation = (typeof OPTIONAL_ARGS_OPERATIONS)[number];
 
 type RequiredArgsFunction<O extends RequiredArgsOperation> = <T, A>(
   this: T,
-  args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>
+  args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>,
 ) => Promise<Prisma.Result<T, A, O>>;
 
 type OptionalArgsFunction<O extends OptionalArgsOperation> = <T, A>(
   this: T,
-  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>
+  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>,
 ) => Promise<Prisma.Result<T, A, O>>;
 
 export type ModelExtension = {
@@ -51,6 +53,11 @@ export interface CacheOptions<
    * Cache key
    */
   key: ((result: Prisma.Result<T, A, O>) => string) | string;
+
+  /**
+   * Cache namespace
+   */
+  namespace?: string;
   /**
    * Time to live
    */
@@ -62,11 +69,15 @@ export interface PrismaCacheArgs<
   A,
   O extends RequiredArgsOperation | OptionalArgsOperation,
 > {
-  cache?: boolean | number | CacheOptions<T, A, O>;
+  cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
     | ((result: Prisma.Result<T, A, O>) => string[] | string)
     | string
-    | string[];
+    | string[]
+    | {
+        key: string;
+        namespace?: string;
+      }[];
 }
 
 export interface PrismaRedisCacheConfig {

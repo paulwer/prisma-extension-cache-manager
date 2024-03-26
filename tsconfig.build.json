@@ -1,11 +1,5 @@
 {
-    "extends": "./tsconfig.json",
-    "exclude": [
-        "node_modules",
-        "dist",
-        "**/*spec.ts"
-    ],
-    "files": [
-        "src/index.ts"
-    ]
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist", "**/*spec.ts"],
+  "files": ["src/index.ts"]
 }

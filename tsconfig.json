@@ -2,10 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "esModuleInterop": true,
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
+    "lib": ["ESNext", "DOM"],
     "module": "CommonJS",
     "moduleResolution": "Node",
     "noImplicitReturns": true,
@@ -15,20 +12,13 @@
     "noUnusedParameters": true,
     "outDir": "./dist",
     "paths": {
-      "~/*": [
-        "./src/*"
-      ]
+      "~/*": ["./src/*"]
     },
     "resolveJsonModule": true,
     "sourceMap": false,
     "strict": true,
     "target": "ESNext"
   },
-  "include": [
-    "./src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["./src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
