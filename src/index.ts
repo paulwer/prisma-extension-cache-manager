@@ -29,7 +29,7 @@ function deserializeData(serializedData) {
   return JSON.parse(serializedData).data;
 }
 
-export default ({ cache }: PrismaRedisCacheConfig) => {
+export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
@@ -125,7 +125,9 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
             const ttl =
-              typeof cacheOption === "number" ? cacheOption : undefined;
+              typeof cacheOption === "number"
+                ? cacheOption
+                : defaultTTL ?? undefined;
             await cache.set(cacheKey, serializeData(result), ttl);
 
             return result;
@@ -139,7 +141,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
             await cache.set(
               customCacheKey,
               serializeData(result),
-              cacheOption.ttl
+              cacheOption.ttl ?? defaultTTL
             );
 
             return result;
@@ -164,7 +166,7 @@ export default ({ cache }: PrismaRedisCacheConfig) => {
           await cache.set(
             customCacheKey,
             serializeData(result),
-            cacheOption.ttl
+            cacheOption.ttl ?? defaultTTL
           );
 
           return result;
