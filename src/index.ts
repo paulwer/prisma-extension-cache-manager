@@ -22,11 +22,19 @@ function createKey(key: string, namespace?: string): string {
 }
 
 function serializeData(data) {
-  return JSON.stringify({ data });
+  return JSON.stringify({ data }, (key, value) => {
+    return value instanceof Prisma.Decimal ? `_decimal_${value.toString()}` : value;
+  })
 }
 
 function deserializeData(serializedData) {
-  return JSON.parse(serializedData).data;
+  return JSON.parse(serializedData, (key, value) => {
+    // Check if the value contains the decimal marker and convert back to Prisma.Decimal
+    if (typeof value === 'string' && value.startsWith('_decimal_')) {
+      return new Prisma.Decimal(value.replace('_decimal_', ''));
+    }
+    return value;
+  }).data;
 }
 
 export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
