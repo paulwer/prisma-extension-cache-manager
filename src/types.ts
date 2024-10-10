@@ -6,6 +6,7 @@ export const REQUIRED_ARGS_OPERATIONS = [
   "delete",
   "findUnique",
   "findUniqueOrThrow",
+  "aggregate",
   "groupBy",
   "update",
   "upsert",
