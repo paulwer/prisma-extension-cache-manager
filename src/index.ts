@@ -21,10 +21,18 @@ function createKey(key: string, namespace?: string): string {
   return namespace ? `${namespace}:${key}` : key;
 }
 
+function serializeDecimalJs(data) {
+  if (Array.isArray(data)) return data.map(serializeDecimalJs); // Handle arrays
+  else if (Decimal.isDecimal(data)) return `_decimal_${data.toString()}`;
+  else if (data && typeof data === 'object') {
+    const out: Record<string, any> = {};
+    for (const key in data) out[key] = serializeDecimalJs(data[key]); // Recursively serialize
+    return out;
+  } else return data;
+}
+
 function serializeData(data) {
-  return JSON.stringify({ data }, (_key, value) => {
-    return value instanceof Decimal ? `_decimal_${value.toString()}` : value;
-  })
+  return JSON.stringify({ data: serializeDecimalJs(data) });
 }
 
 function deserializeData(serializedData) {
@@ -119,9 +127,9 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               typeof cacheOption === "string"
                 ? cacheOption
                 : generateComposedKey({
-                    model,
-                    queryArgs,
-                  });
+                  model,
+                  queryArgs,
+                });
 
             if (!isWriteOperation) {
               const cached = await cache.get(cacheKey);
