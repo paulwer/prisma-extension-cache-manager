@@ -22,9 +22,10 @@ function createKey(key: string, namespace?: string): string {
 }
 
 function serializeDecimalJs(data) {
-  if (Array.isArray(data)) return data.map(serializeDecimalJs); // Handle arrays
+  if (Array.isArray(data))
+    return data.map(serializeDecimalJs); // Handle arrays
   else if (Decimal.isDecimal(data)) return `_decimal_${data.toString()}`;
-  else if (data && typeof data === 'object') {
+  else if (data && typeof data === "object") {
     const out: Record<string, any> = {};
     for (const key in data) out[key] = serializeDecimalJs(data[key]); // Recursively serialize
     return out;
@@ -38,8 +39,8 @@ function serializeData(data) {
 function deserializeData(serializedData) {
   return JSON.parse(serializedData, (_key, value) => {
     // Check if the value contains the decimal marker and convert back to Prisma.Decimal
-    if (typeof value === 'string' && value.startsWith('_decimal_')) {
-      return new Decimal(value.replace('_decimal_', ''));
+    if (typeof value === "string" && value.startsWith("_decimal_")) {
+      return new Decimal(value.replace("_decimal_", ""));
     }
     return value;
   }).data;
@@ -90,7 +91,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
                 keysToDelete = option;
               } else if (typeof option[0] === "object") {
                 keysToDelete = option.map((obj) =>
-                  obj.namespace ? `${obj.namespace}:${obj.key}` : obj.key
+                  obj.namespace ? `${obj.namespace}:${obj.key}` : obj.key,
                 );
               }
             }
@@ -106,7 +107,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           const useCache =
             cacheOption !== undefined &&
             ["boolean", "object", "number", "string"].includes(
-              typeof cacheOption
+              typeof cacheOption,
             );
 
           const useUncache =
@@ -127,9 +128,9 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               typeof cacheOption === "string"
                 ? cacheOption
                 : generateComposedKey({
-                  model,
-                  queryArgs,
-                });
+                    model,
+                    queryArgs,
+                  });
 
             if (!isWriteOperation) {
               const cached = await cache.get(cacheKey);
@@ -157,7 +158,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
             await cache.set(
               customCacheKey,
               serializeData(result),
-              cacheOption.ttl ?? defaultTTL
+              cacheOption.ttl ?? defaultTTL,
             );
 
             return result;
@@ -182,7 +183,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           await cache.set(
             customCacheKey,
             serializeData(result),
-            cacheOption.ttl ?? defaultTTL
+            cacheOption.ttl ?? defaultTTL,
           );
 
           return result;

@@ -1,13 +1,13 @@
 {
-  "name": "@knaus94/prisma-extension-cache-manager",
-  "version": "1.4.3",
+  "name": "@paulwer/prisma-extension-cache-manager",
+  "version": "2.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/knaus94/prisma-extension-cache-manager.git"
+    "url": "https://github.com/paulwer/prisma-extension-cache-manager.git"
   },
   "author": {
-    "name": "knaus94",
-    "url": "https://github.com/knaus94"
+    "name": "paulwer",
+    "url": "https://github.com/paulwer"
   },
   "keywords": [
     "prisma",
@@ -37,7 +37,8 @@
     "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "publish": "npm run format && npm run build && npm publish"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

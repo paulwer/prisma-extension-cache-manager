@@ -31,12 +31,12 @@ type OptionalArgsOperation = (typeof OPTIONAL_ARGS_OPERATIONS)[number];
 
 type RequiredArgsFunction<O extends RequiredArgsOperation> = <T, A>(
   this: T,
-  args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>
+  args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>,
 ) => Prisma.PrismaPromise<Prisma.Result<T, A, O>>;
 
 type OptionalArgsFunction<O extends OptionalArgsOperation> = <T, A>(
   this: T,
-  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>
+  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>,
 ) => Prisma.PrismaPromise<Prisma.Result<T, A, O>>;
 
 export type ModelExtension = {
