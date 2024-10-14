@@ -7,6 +7,7 @@ import {
 import { createHash } from "crypto";
 import { Prisma } from "@prisma/client/extension";
 import { Decimal } from "@prisma/client/runtime/library";
+import { stringify } from "safe-stable-stringify";
 
 export function generateComposedKey(options: {
   model: string;
@@ -42,7 +43,7 @@ export function serializeData(data) {
       return out;
     } else return data;
   }
-  return JSON.stringify({ data: serializeCustomClasses(data) });
+  return stringify({ data: serializeCustomClasses(data) });
 }
 
 export function deserializeData(serializedData) {

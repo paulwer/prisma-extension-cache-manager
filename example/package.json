@@ -5,7 +5,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
-    "@paulwer/prisma-extension-cache-manager": "2.1.0",
+    "@paulwer/prisma-extension-cache-manager": "2.1.1",
     "cache-manager": "^5.2.3"
   },
   "devDependencies": {
