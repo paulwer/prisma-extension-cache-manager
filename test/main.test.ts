@@ -4,7 +4,7 @@ import * as cm from "cache-manager";
 import assert from "node:assert";
 import test from "node:test";
 import cacheExtension, { deserializeData, generateComposedKey } from "../src";
-import { READ_OPERATIONS } from "../src/types";
+import { OPTIONAL_ARGS_OPERATIONS, READ_OPERATIONS } from "../src/types";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -115,6 +115,24 @@ test("cacheExtension", { only: true }, async (t) => {
     q += expectedOperations;
     c += expectedOperations;
     await testCache();
+  });
+
+  await t.test(
+    "every optional args model operation without args & cache",
+    async () => {
+      await prisma.user.findMany();
+      await prisma.user.findFirst();
+      await prisma.user.findFirstOrThrow();
+      await prisma.user.count();
+      await prisma.user.deleteMany();
+      const expectedOperations = OPTIONAL_ARGS_OPERATIONS.length;
+      q += expectedOperations;
+      await testCache();
+    },
+  );
+
+  await t.test("inside a prisma transaction", async () => {
+    await prisma.$transaction([prisma.user.findMany()]);
   });
 
   await t.test("value matching", async () => {

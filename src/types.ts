@@ -1,6 +1,7 @@
 import { Operation } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client/extension";
 import { Cache } from "cache-manager";
+import { PrismaPromise } from "@prisma/client";
 
 export const CACHE_OPERATIONS = [
   "findMany",
@@ -41,18 +42,51 @@ export const WRITE_OPERATIONS = [
   "deleteMany",
 ] as const satisfies ReadonlyArray<Operation>;
 
-type ArgsOperation = (typeof CACHE_OPERATIONS)[number];
+export const REQUIRED_ARGS_OPERATIONS = [
+  "findUnique",
+  "findUniqueOrThrow",
+  "aggregate",
+  "groupBy",
+  "create",
+  "createMany",
+  "updateMany",
+  "update",
+  "upsert",
+  "delete",
+] as const satisfies ReadonlyArray<Operation>;
 
-type ArgsFunction<O extends ArgsOperation> = <T, A>(
+export const OPTIONAL_ARGS_OPERATIONS = [
+  "findMany",
+  "findFirst",
+  "findFirstOrThrow",
+  "count",
+  "deleteMany",
+] as const satisfies ReadonlyArray<Operation>;
+
+type RequiredArgsOperation = (typeof REQUIRED_ARGS_OPERATIONS)[number];
+type OptionalArgsOperation = (typeof OPTIONAL_ARGS_OPERATIONS)[number];
+
+type RequiredArgsFunction<O extends RequiredArgsOperation> = <T, A>(
   this: T,
   args: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>,
-) => Prisma.PrismaPromise<Prisma.Result<T, A, O>>;
+) => PrismaPromise<Prisma.Result<T, A, O>>;
+
+type OptionalArgsFunction<O extends OptionalArgsOperation> = <T, A>(
+  this: T,
+  args?: Prisma.Exact<A, Prisma.Args<T, O> & PrismaCacheArgs<T, A, O>>,
+) => PrismaPromise<Prisma.Result<T, A, O>>;
 
 export type ModelExtension = {
-  [O in ArgsOperation]: ArgsFunction<O>;
+  [O1 in RequiredArgsOperation]: RequiredArgsFunction<O1>;
+} & {
+  [O2 in OptionalArgsOperation]: OptionalArgsFunction<O2>;
 };
 
-export interface CacheOptions<T, A, O extends ArgsOperation> {
+export interface CacheOptions<
+  T,
+  A,
+  O extends RequiredArgsOperation | OptionalArgsOperation,
+> {
   /**
    * Cache key
    */
@@ -68,7 +102,11 @@ export interface CacheOptions<T, A, O extends ArgsOperation> {
   ttl?: number;
 }
 
-export interface PrismaCacheArgs<T, A, O extends ArgsOperation> {
+export interface PrismaCacheArgs<
+  T,
+  A,
+  O extends RequiredArgsOperation | OptionalArgsOperation,
+> {
   cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
     | ((result: Prisma.Result<T, A, O>) => string[] | string)
