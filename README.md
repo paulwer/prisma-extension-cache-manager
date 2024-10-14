@@ -1,17 +1,21 @@
 # @paulwer/prisma-extension-cache-manager
 
-A caching extension for [Prisma](https://www.prisma.io/), compatible with [cache-manager](https://www.npmjs.com/package/cache-manager).
+A caching extension for [Prisma](https://www.prisma.io/), fully compatible with [cache-manager](https://www.npmjs.com/package/cache-manager), predefined uncaching strategies and custom handlers for key generation and uncaching.
 
 ## Features
 
-- [cache-manager](https://www.npmjs.com/package/cache-manager) compatibility
+- full [cache-manager](https://www.npmjs.com/package/cache-manager) compatibility => also supports external storages like redis (see cache-manager)
+- Automatic uncaching strategy
+- Namespaces for separate caching ttl
+- Custom keys for custom caching strategies
+- Keys and Uncache-Strategy can be handled with a custom functions
 - Only model queries can be cacheable (no $query or $queryRaw)
 
 ## Installation
 
 Install:
 
-```
+```cmd
 npm i @paulwer/prisma-extension-cache-manager
 ```
 
@@ -41,6 +45,12 @@ async function main() {
     cache: {
       ttl: 2000,
       key: "user_count", // custom cache key
+    },
+  });
+  await prisma.user.count({
+    cache: {
+      ttl: 24 * 60 * 60 * 1000,
+      namespace: "pricing_tier1", // custom namespace for custom ttls
     },
   });
   await prisma.user.update({

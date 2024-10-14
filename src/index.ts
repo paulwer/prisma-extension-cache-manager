@@ -15,19 +15,23 @@ export function generateComposedKey(options: {
   queryArgs: any;
 }): string {
   const hash = createHash("md5")
-    .update(JSON.stringify(options?.queryArgs, (_, v) => typeof v === 'bigint' ? v.toString() : v))
+    .update(
+      JSON.stringify(options?.queryArgs, (_, v) =>
+        typeof v === "bigint" ? v.toString() : v,
+      ),
+    )
     .digest("hex");
-  return `${options.namespace ? `${options.namespace}:` : ''}${options.model}:${options.operation}@${hash}`;
+  return `${options.namespace ? `${options.namespace}:` : ""}${options.model}:${options.operation}@${hash}`;
 }
 
 function createKey(key?: string, namespace?: string): string {
-  return [namespace, key].filter(e => !!e).join(":");
+  return [namespace, key].filter((e) => !!e).join(":");
 }
 
 export function serializeData(data) {
   function serializeDecimalJs(data) {
     if (Decimal.isDecimal(data)) return `___decimal_${data.toString()}`;
-    if (typeof data === 'bigint') return `___bigint_${data.toString()}`;
+    if (typeof data === "bigint") return `___bigint_${data.toString()}`;
     if (Buffer.isBuffer(data)) return `___buffer_${data.toString()}`;
     if (data instanceof Date) return `___date_${data.toISOString()}`;
     else if (Array.isArray(data))
@@ -71,7 +75,9 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           if (!(CACHE_OPERATIONS as ReadonlyArray<string>).includes(operation))
             return query(args);
 
-          const isWriteOperation = (WRITE_OPERATIONS as readonly string[]).includes(operation);
+          const isWriteOperation = (
+            WRITE_OPERATIONS as readonly string[]
+          ).includes(operation);
 
           const {
             cache: cacheOption,
@@ -106,8 +112,17 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               .catch(() => false);
           }
 
-          const useCache = cacheOption !== undefined && ["boolean", "object", "number", "string"].includes(typeof cacheOption) && !(typeof cacheOption === 'boolean' && cacheOption === false);
-          const useUncache = uncacheOption !== undefined && (typeof uncacheOption === "function" || typeof uncacheOption === "string" || Array.isArray(uncacheOption));
+          const useCache =
+            cacheOption !== undefined &&
+            ["boolean", "object", "number", "string"].includes(
+              typeof cacheOption,
+            ) &&
+            !(typeof cacheOption === "boolean" && cacheOption === false);
+          const useUncache =
+            uncacheOption !== undefined &&
+            (typeof uncacheOption === "function" ||
+              typeof uncacheOption === "string" ||
+              Array.isArray(uncacheOption));
 
           if (!useCache) {
             const result = await query(queryArgs);
@@ -122,20 +137,25 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
 
             const customCacheKey = cacheOption.key(result);
 
-            cache.set(customCacheKey, serializeData(result), cacheOption.ttl ?? defaultTTL);
+            cache.set(
+              customCacheKey,
+              serializeData(result),
+              cacheOption.ttl ?? defaultTTL,
+            );
             return result;
           }
 
-          const cacheKey = typeof cacheOption === "string"
-            ? cacheOption :
-            cacheOption.key ?
-              createKey(cacheOption.key, cacheOption.namespace) :
-              generateComposedKey({
-                model,
-                operation,
-                namespace: cacheOption.namespace,
-                queryArgs,
-              });
+          const cacheKey =
+            typeof cacheOption === "string"
+              ? cacheOption
+              : cacheOption.key
+                ? createKey(cacheOption.key, cacheOption.namespace)
+                : generateComposedKey({
+                    model,
+                    operation,
+                    namespace: cacheOption.namespace,
+                    queryArgs,
+                  });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);
@@ -145,7 +165,11 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           const result = await query(queryArgs);
           if (useUncache) processUncache(result);
 
-          await cache.set(cacheKey, serializeData(result), cacheOption.ttl ?? defaultTTL);
+          await cache.set(
+            cacheKey,
+            serializeData(result),
+            cacheOption.ttl ?? defaultTTL,
+          );
           return result;
         },
       },

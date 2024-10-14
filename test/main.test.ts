@@ -1,28 +1,29 @@
-import { Prisma, PrismaClient } from '@prisma/client';
-import { Metrics } from '@prisma/client/runtime/library';
-import * as cm from 'cache-manager';
-import assert from 'node:assert';
-import test from 'node:test';
-import cacheExtension, { deserializeData, generateComposedKey } from '../src';
-import { READ_OPERATIONS } from '../src/types';
+import { Prisma, PrismaClient } from "@prisma/client";
+import { Metrics } from "@prisma/client/runtime/library";
+import * as cm from "cache-manager";
+import assert from "node:assert";
+import test from "node:test";
+import cacheExtension, { deserializeData, generateComposedKey } from "../src";
+import { READ_OPERATIONS } from "../src/types";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-test('cacheExtension', { only: true }, async (t) => {
+test("cacheExtension", { only: true }, async (t) => {
   const defaultTtl = 100;
-  const cache = await cm.caching('memory', {
+  const cache = await cm.caching("memory", {
     ttl: defaultTtl,
   });
 
   // regenerate client to reset metrics
-  const getClient = () => new PrismaClient().$extends(cacheExtension({ cache }));
+  const getClient = () =>
+    new PrismaClient().$extends(cacheExtension({ cache }));
 
   let prisma = getClient();
   assert(prisma.$cache === cache);
   // db queries count
   const queries = async (): Promise<number | undefined> =>
     ((await (prisma as any).$metrics.json()) as Metrics).counters.find(
-      (x: any) => x.key === 'prisma_client_queries_total'
+      (x: any) => x.key === "prisma_client_queries_total",
     )?.value;
   // expected db query count
   let q = 0;
@@ -44,12 +45,12 @@ test('cacheExtension', { only: true }, async (t) => {
     assert.equal(cc, c, `cache mismatch: ${cc - c}`);
   };
   const insert = {
-    string: 'string',
-    decimal: new Prisma.Decimal('10.44'),
-    bigint: BigInt('1283231897'),
+    string: "string",
+    decimal: new Prisma.Decimal("10.44"),
+    bigint: BigInt("1283231897"),
     float: 321.84784,
     timestamp: new Date(),
-    bytes: Buffer.from('o21ijferve9ir3'),
+    bytes: Buffer.from("o21ijferve9ir3"),
   };
   // clear table
   await prisma.$executeRaw`delete from "User"`;
@@ -71,19 +72,19 @@ test('cacheExtension', { only: true }, async (t) => {
             not: null,
           },
           decimal: {
-            not: new Prisma.Decimal('10.99'),
+            not: new Prisma.Decimal("10.99"),
           },
         },
       ],
     },
     orderBy: {
-      timestamp: 'desc',
+      timestamp: "desc",
     },
   } satisfies Prisma.UserFindManyArgs;
 
   // t.runOnly(true);
 
-  await t.test('every read model operation', async () => {
+  await t.test("every read model operation", async () => {
     const useCache = { cache: true } as const;
     await prisma.user.findMany(useCache);
     await prisma.user.findFirst(useCache);
@@ -104,7 +105,7 @@ test('cacheExtension', { only: true }, async (t) => {
       ...useCache,
     });
     await prisma.user.groupBy({
-      by: 'id',
+      by: "id",
       _sum: {
         float: true,
       },
@@ -116,8 +117,8 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('value matching', async () => {
-    const key = 'key';
+  await t.test("value matching", async () => {
+    const key = "key";
     const arg = {
       ...args,
       cache: {
@@ -136,8 +137,12 @@ test('cacheExtension', { only: true }, async (t) => {
     assert.deepEqual(d1, d3);
   });
 
-  await t.test('key generation', async () => {
-    const hashingData = { model: 'User', operation: 'findMany', queryArgs: args };
+  await t.test("key generation", async () => {
+    const hashingData = {
+      model: "User",
+      operation: "findMany",
+      queryArgs: args,
+    };
     await prisma.user.findMany({ ...args, cache: true });
     const key = generateComposedKey(hashingData);
     assert(await cache.get(key));
@@ -148,16 +153,16 @@ test('cacheExtension', { only: true }, async (t) => {
     const now = Date.now();
     await prisma.user.count({
       where: {
-        decimal: new Prisma.Decimal('1.1213'),
-        bytes: Buffer.from('123'),
+        decimal: new Prisma.Decimal("1.1213"),
+        bytes: Buffer.from("123"),
         timestamp: new Date(now),
       },
       cache: true,
     });
     await prisma.user.count({
       where: {
-        decimal: new Prisma.Decimal('1.1213'),
-        bytes: Buffer.from('123'),
+        decimal: new Prisma.Decimal("1.1213"),
+        bytes: Buffer.from("123"),
         timestamp: new Date(now),
       },
       cache: true,
@@ -167,24 +172,24 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('no cache', async () => {
+  await t.test("no cache", async () => {
     await prisma.user.findMany({ cache: false });
     q++;
     await testCache();
   });
 
   await t.test(
-    'same args different operation should use different key',
+    "same args different operation should use different key",
     async () => {
       await prisma.user.findMany({ ...args, cache: true });
       await prisma.user.count({ ...args, cache: true });
       q += 2;
       c += 2;
       await testCache();
-    }
+    },
   );
 
-  await t.test('same args different cache options', async () => {
+  await t.test("same args different cache options", async () => {
     await prisma.user.count({ ...args, cache: true });
     // cache hit
     await prisma.user.count({
@@ -198,7 +203,7 @@ test('cacheExtension', { only: true }, async (t) => {
       ...args,
       cache: {
         ttl: 100,
-        key: 'different-key',
+        key: "different-key",
       },
     });
     // cache miss
@@ -206,7 +211,7 @@ test('cacheExtension', { only: true }, async (t) => {
       ...args,
       cache: {
         ttl: 100,
-        namespace: 'different-key',
+        namespace: "different-key",
       },
     });
     q += 3;
@@ -214,7 +219,7 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('default ttl', async () => {
+  await t.test("default ttl", async () => {
     await prisma.user.findFirst({
       cache: true,
     });
@@ -229,7 +234,7 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('custom ttl', async () => {
+  await t.test("custom ttl", async () => {
     const ttl = 200;
     await prisma.user.count({
       cache: ttl,
@@ -244,7 +249,7 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('shortened ttl should still use cache', async () => {
+  await t.test("shortened ttl should still use cache", async () => {
     const ttl = 400;
     await prisma.user.count({
       cache: ttl,
@@ -257,7 +262,7 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('expired ttl should should not have cache', async () => {
+  await t.test("expired ttl should should not have cache", async () => {
     const ttl = 400;
     await prisma.user.count({
       cache: ttl,
@@ -270,32 +275,43 @@ test('cacheExtension', { only: true }, async (t) => {
     await testCache();
   });
 
-  await t.test('custom cache keys for provided namespace', async () => {
-    const hashingDataWithout = { model: 'User', operation: 'findMany', queryArgs: args };
+  await t.test("custom cache keys for provided namespace", async () => {
+    const hashingDataWithout = {
+      model: "User",
+      operation: "findMany",
+      queryArgs: args,
+    };
     await prisma.user.findMany({
-      ...args, cache: true
+      ...args,
+      cache: true,
     });
     const keyWithout = generateComposedKey(hashingDataWithout);
-    assert(!keyWithout.startsWith('test:'), `invalid key: ${keyWithout}`);
+    assert(!keyWithout.startsWith("test:"), `invalid key: ${keyWithout}`);
     assert(await cache.get(keyWithout));
     q++;
     c++;
     await testCache();
     // Now with namespace
-    const hashingData = { model: 'User', operation: 'findMany', namespace: 'test', queryArgs: args };
+    const hashingData = {
+      model: "User",
+      operation: "findMany",
+      namespace: "test",
+      queryArgs: args,
+    };
     await prisma.user.findMany({
-      ...args, cache: {
-        namespace: 'test',
-      }
+      ...args,
+      cache: {
+        namespace: "test",
+      },
     });
     const key = generateComposedKey(hashingData);
-    assert(key.startsWith('test:'), `invalid key: ${key}`);
+    assert(key.startsWith("test:"), `invalid key: ${key}`);
     assert(await cache.get(key));
     q++;
     c++;
     await testCache();
   });
 
-  t.todo('write operation should uncache');
-  t.todo('key generation should work as a function');
+  t.todo("write operation should uncache");
+  t.todo("key generation should work as a function");
 });

@@ -52,11 +52,7 @@ export type ModelExtension = {
   [O in ArgsOperation]: ArgsFunction<O>;
 };
 
-export interface CacheOptions<
-  T,
-  A,
-  O extends ArgsOperation,
-> {
+export interface CacheOptions<T, A, O extends ArgsOperation> {
   /**
    * Cache key
    */
@@ -72,20 +68,16 @@ export interface CacheOptions<
   ttl?: number;
 }
 
-export interface PrismaCacheArgs<
-  T,
-  A,
-  O extends ArgsOperation,
-> {
+export interface PrismaCacheArgs<T, A, O extends ArgsOperation> {
   cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
-  | ((result: Prisma.Result<T, A, O>) => string[] | string)
-  | string
-  | string[]
-  | {
-    key: string;
-    namespace?: string;
-  }[];
+    | ((result: Prisma.Result<T, A, O>) => string[] | string)
+    | string
+    | string[]
+    | {
+        key: string;
+        namespace?: string;
+      }[];
 }
 
 export interface PrismaRedisCacheConfig {

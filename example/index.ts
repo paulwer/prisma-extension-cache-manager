@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
-import * as cm from 'cache-manager';
-import assert from 'node:assert';
-import cacheExtension from '@paulwer/prisma-extension-cache-manager';
+import { PrismaClient } from "@prisma/client";
+import * as cm from "cache-manager";
+import assert from "node:assert";
+import cacheExtension from "@paulwer/prisma-extension-cache-manager";
 
 async function main() {
-  const cache = await cm.caching('memory', {
+  const cache = await cm.caching("memory", {
     ttl: 1000,
     max: 200,
   });
