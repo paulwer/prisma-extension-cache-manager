@@ -53,7 +53,7 @@ export interface CacheOptions<
   /**
    * Cache key
    */
-  key: ((result: Prisma.Result<T, A, O>) => string) | string;
+  key?: ((result: Prisma.Result<T, A, O>) => string) | string;
 
   /**
    * Cache namespace
@@ -72,13 +72,13 @@ export interface PrismaCacheArgs<
 > {
   cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
-    | ((result: Prisma.Result<T, A, O>) => string[] | string)
-    | string
-    | string[]
-    | {
-        key: string;
-        namespace?: string;
-      }[];
+  | ((result: Prisma.Result<T, A, O>) => string[] | string)
+  | string
+  | string[]
+  | {
+    key: string;
+    namespace?: string;
+  }[];
 }
 
 export interface PrismaRedisCacheConfig {

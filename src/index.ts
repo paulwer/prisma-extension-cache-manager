@@ -4,7 +4,7 @@ import {
   PrismaRedisCacheConfig,
 } from "./types";
 import { createHash } from "crypto";
-import { Decimal, Operation } from "@prisma/client/runtime/library";
+import { Operation } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client/extension";
 
 function generateComposedKey(options: {
@@ -17,33 +17,8 @@ function generateComposedKey(options: {
   return `${options.model}@${hash}`;
 }
 
-function createKey(key: string, namespace?: string): string {
+function createKey(key?: string, namespace?: string): string | undefined {
   return namespace ? `${namespace}:${key}` : key;
-}
-
-function serializeDecimalJs(data) {
-  if (Array.isArray(data))
-    return data.map(serializeDecimalJs); // Handle arrays
-  else if (Decimal.isDecimal(data)) return `_decimal_${data.toString()}`;
-  else if (data && typeof data === "object") {
-    const out: Record<string, any> = {};
-    for (const key in data) out[key] = serializeDecimalJs(data[key]); // Recursively serialize
-    return out;
-  } else return data;
-}
-
-function serializeData(data) {
-  return JSON.stringify({ data: serializeDecimalJs(data) });
-}
-
-function deserializeData(serializedData) {
-  return JSON.parse(serializedData, (_key, value) => {
-    // Check if the value contains the decimal marker and convert back to Prisma.Decimal
-    if (typeof value === "string" && value.startsWith("_decimal_")) {
-      return new Decimal(value.replace("_decimal_", ""));
-    }
-    return value;
-  }).data;
 }
 
 export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
@@ -104,17 +79,8 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               .catch(() => false);
           }
 
-          const useCache =
-            cacheOption !== undefined &&
-            ["boolean", "object", "number", "string"].includes(
-              typeof cacheOption,
-            );
-
-          const useUncache =
-            uncacheOption !== undefined &&
-            (typeof uncacheOption === "function" ||
-              typeof uncacheOption === "string" ||
-              Array.isArray(uncacheOption));
+          const useCache = cacheOption !== undefined && ["boolean", "object", "number", "string"].includes(typeof cacheOption);
+          const useUncache = uncacheOption !== undefined && (typeof uncacheOption === "function" || typeof uncacheOption === "string" || Array.isArray(uncacheOption));
 
           if (!useCache) {
             const result = await query(queryArgs);
@@ -124,30 +90,18 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           }
 
           if (["boolean", "number", "string"].includes(typeof cacheOption)) {
-            const cacheKey =
-              typeof cacheOption === "string"
-                ? cacheOption
-                : generateComposedKey({
-                    model,
-                    queryArgs,
-                  });
+            const cacheKey = typeof cacheOption === "string"
+              ? cacheOption
+              : generateComposedKey({
+                model,
+                queryArgs,
+              });
 
-            if (!isWriteOperation) {
-              const cached = await cache.get(cacheKey);
-              if (cached) {
-                return deserializeData(cached);
-              }
-            }
+            if (!isWriteOperation) return cache.wrap(cacheKey, () => query(queryArgs), cacheOption.ttl ?? defaultTTL);
 
             const result = await query(queryArgs);
             if (useUncache) processUncache(result);
-            const ttl =
-              typeof cacheOption === "number"
-                ? cacheOption
-                : defaultTTL ?? undefined;
-            await cache.set(cacheKey, serializeData(result), ttl);
-
-            return result;
+            return cache.wrap(cacheKey, async () => result, typeof cacheOption === "number" ? cacheOption : defaultTTL ?? undefined);
           }
 
           if (typeof cacheOption.key === "function") {
@@ -155,13 +109,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
             if (useUncache) processUncache(result);
 
             const customCacheKey = cacheOption.key(result);
-            await cache.set(
-              customCacheKey,
-              serializeData(result),
-              cacheOption.ttl ?? defaultTTL,
-            );
-
-            return result;
+            return cache.wrap(customCacheKey, async () => result, cacheOption.ttl ?? defaultTTL);
           }
 
           const customCacheKey =
@@ -171,22 +119,11 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               queryArgs,
             });
 
-          if (!isWriteOperation) {
-            const cached = await cache.get(customCacheKey);
-            if (cached) {
-              return deserializeData(cached);
-            }
-          }
+          if (!isWriteOperation) return cache.wrap(customCacheKey, () => query(queryArgs), cacheOption.ttl ?? defaultTTL);
 
           const result = await query(queryArgs);
           if (useUncache) processUncache(result);
-          await cache.set(
-            customCacheKey,
-            serializeData(result),
-            cacheOption.ttl ?? defaultTTL,
-          );
-
-          return result;
+          return cache.wrap(customCacheKey, async () => result, cacheOption.ttl ?? defaultTTL);
         },
       },
     },
