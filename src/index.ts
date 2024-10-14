@@ -47,7 +47,7 @@ export function serializeData(data) {
 
 export function deserializeData(serializedData) {
   return JSON.parse(serializedData, (_key, value) => {
-    // Check if the value contains the decimal marker and convert back to Prisma.Decimal
+    // Check if the value contains the custom marker and convert back to original class/type
     if (typeof value === "string" && value.startsWith("___decimal_"))
       return new Decimal(value.replace("___decimal_", ""));
     if (typeof value === "string" && value.startsWith("___buffer_"))
