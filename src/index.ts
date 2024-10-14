@@ -2,23 +2,25 @@ import {
   CACHE_OPERATIONS,
   ModelExtension,
   PrismaRedisCacheConfig,
+  WRITE_OPERATIONS,
 } from "./types";
 import { createHash } from "crypto";
-import { Operation } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client/extension";
 
-function generateComposedKey(options: {
+export function generateComposedKey(options: {
   model: string;
+  operation: string;
+  namespace?: string;
   queryArgs: any;
 }): string {
   const hash = createHash("md5")
-    .update(JSON.stringify(options?.queryArgs))
+    .update(JSON.stringify(options?.queryArgs, (_, v) => typeof v === 'bigint' ? v.toString() : v))
     .digest("hex");
-  return `${options.model}@${hash}`;
+  return `${options.namespace ? `${options.namespace}:` : ''}${options.model}:${options.operation}@${hash}`;
 }
 
-function createKey(key?: string, namespace?: string): string | undefined {
-  return namespace ? `${namespace}:${key}` : key;
+function createKey(key?: string, namespace?: string): string {
+  return [namespace, key].filter(e => !!e).join(":");
 }
 
 export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
@@ -36,15 +38,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           if (!(CACHE_OPERATIONS as ReadonlyArray<string>).includes(operation))
             return query(args);
 
-          const isWriteOperation = (
-            [
-              "create",
-              "createMany",
-              "updateMany",
-              "upsert",
-              "update",
-            ] as ReadonlyArray<Operation> as string[]
-          ).includes(operation);
+          const isWriteOperation = (WRITE_OPERATIONS as readonly string[]).includes(operation);
 
           const {
             cache: cacheOption,
@@ -79,7 +73,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               .catch(() => false);
           }
 
-          const useCache = cacheOption !== undefined && ["boolean", "object", "number", "string"].includes(typeof cacheOption);
+          const useCache = cacheOption !== undefined && ["boolean", "object", "number", "string"].includes(typeof cacheOption) && !(typeof cacheOption === 'boolean' && cacheOption === false);
           const useUncache = uncacheOption !== undefined && (typeof uncacheOption === "function" || typeof uncacheOption === "string" || Array.isArray(uncacheOption));
 
           if (!useCache) {
@@ -94,6 +88,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               ? cacheOption
               : generateComposedKey({
                 model,
+                operation,
                 queryArgs,
               });
 
@@ -112,10 +107,12 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
             return cache.wrap(customCacheKey, async () => result, cacheOption.ttl ?? defaultTTL);
           }
 
-          const customCacheKey =
-            createKey(cacheOption.key, cacheOption.namespace) ||
+          const customCacheKey = cacheOption.key ?
+            createKey(cacheOption.key, cacheOption.namespace) :
             generateComposedKey({
               model,
+              operation,
+              namespace: cacheOption.namespace,
               queryArgs,
             });
 
