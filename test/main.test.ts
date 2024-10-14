@@ -3,7 +3,7 @@ import { Metrics } from '@prisma/client/runtime/library';
 import * as cm from 'cache-manager';
 import assert from 'node:assert';
 import test from 'node:test';
-import cacheExtension, { generateComposedKey } from '../src';
+import cacheExtension, { deserializeData, generateComposedKey } from '../src';
 import { READ_OPERATIONS } from '../src/types';
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -123,13 +123,13 @@ test('cacheExtension', { only: true }, async (t) => {
       cache: {
         key,
       },
-    };
+    } satisfies Prisma.UserFindManyArgs & { cache: any };
     const d1 = await prisma.user.findMany(arg);
     q++;
     c++;
     await testCache();
     const d2 = await prisma.user.findMany(arg);
-    const d3: typeof d2 = (await cache.get(key))!;
+    const d3: typeof d2 = deserializeData((await cache.get(key))!);
     await testCache();
     assert(d3);
     assert.deepEqual(d1, d2);
