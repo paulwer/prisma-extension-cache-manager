@@ -29,20 +29,20 @@ function createKey(key?: string, namespace?: string): string {
 }
 
 export function serializeData(data) {
-  function serializeDecimalJs(data) {
+  function serializeCustomClasses(data) {
     if (Decimal.isDecimal(data)) return `___decimal_${data.toString()}`;
     if (typeof data === "bigint") return `___bigint_${data.toString()}`;
     if (Buffer.isBuffer(data)) return `___buffer_${data.toString()}`;
     if (data instanceof Date) return `___date_${data.toISOString()}`;
     else if (Array.isArray(data))
-      return data.map(serializeDecimalJs); // Handle arrays
+      return data.map(serializeCustomClasses); // Handle arrays
     else if (data && typeof data === "object") {
       const out: Record<string, any> = {};
-      for (const key in data) out[key] = serializeDecimalJs(data[key]); // Recursively serialize
+      for (const key in data) out[key] = serializeCustomClasses(data[key]); // Recursively serialize
       return out;
     } else return data;
   }
-  return JSON.stringify({ data: serializeDecimalJs(data) });
+  return JSON.stringify({ data: serializeCustomClasses(data) });
 }
 
 export function deserializeData(serializedData) {
