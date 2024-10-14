@@ -1,0 +1,17 @@
+{
+  "name": "example",
+  "scripts": {
+    "dev": "ts-node index.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "@paulwer/prisma-extension-cache-manager": "2.0.0",
+    "cache-manager": "^5.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "prisma": "^5.20.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
