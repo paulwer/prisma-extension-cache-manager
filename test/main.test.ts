@@ -3,7 +3,8 @@ import { Metrics } from "@prisma/client/runtime/library";
 import * as cm from "cache-manager";
 import assert from "node:assert";
 import test from "node:test";
-import cacheExtension, { deserializeData, generateComposedKey } from "../src";
+import cacheExtension from "../src";
+import { deserializeData, generateComposedKey } from "../src/methods"
 import { OPTIONAL_ARGS_OPERATIONS, READ_OPERATIONS } from "../src/types";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -15,8 +16,8 @@ test("cacheExtension", { only: true }, async (t) => {
   });
 
   // regenerate client to reset metrics
-  const getClient = () =>
-    new PrismaClient().$extends(cacheExtension({ cache }));
+  let useClientWithAutomaticUncache = false;
+  const getClient = () => new PrismaClient().$extends(cacheExtension({ cache, useAutoUncache: useClientWithAutomaticUncache }));
 
   let prisma = getClient();
   assert(prisma.$cache === cache);
@@ -44,19 +45,29 @@ test("cacheExtension", { only: true }, async (t) => {
     assert.equal(qq, q, `queries mismatch: ${(qq || 0) - q}`);
     assert.equal(cc, c, `cache mismatch: ${cc - c}`);
   };
-  const insert = {
-    string: "string",
-    decimal: new Prisma.Decimal("10.44"),
-    bigint: BigInt("1283231897"),
-    float: 321.84784,
-    timestamp: new Date(),
-    bytes: Buffer.from("o21ijferve9ir3"),
-  };
   // clear table
-  await prisma.$executeRaw`delete from "User"`;
-  const user = await prisma.user.create({
-    data: insert,
-  });
+  const reset = async () => {
+    await prisma.user.deleteMany();
+    await prisma.post.deleteMany();
+    return await prisma.user.create({
+      data: {
+        id: 1,
+        string: "string",
+        decimal: new Prisma.Decimal("10.44"),
+        bigint: BigInt("1283231897"),
+        float: 321.84784,
+        timestamp: new Date(),
+        bytes: Buffer.from("o21ijferve9ir3"),
+        posts: {
+          create: {
+            id: 1,
+          }
+        }
+      },
+    });
+  }
+
+  const user = await reset();
 
   const args = {
     where: {
@@ -125,11 +136,13 @@ test("cacheExtension", { only: true }, async (t) => {
       await prisma.user.findFirstOrThrow();
       await prisma.user.count();
       await prisma.user.deleteMany();
+
       const expectedOperations = OPTIONAL_ARGS_OPERATIONS.length;
       q += expectedOperations;
       await testCache();
     },
   );
+  await reset(); // recreate the data because we have done write operations
 
   await t.test("inside a prisma transaction", async () => {
     await prisma.$transaction([prisma.user.findMany()]);
@@ -330,6 +343,117 @@ test("cacheExtension", { only: true }, async (t) => {
     await testCache();
   });
 
-  t.todo("write operation should uncache");
-  t.todo("key generation should work as a function");
+  // TEST FOR AUTOMATIC UNCACHE
+  await t.test("write operation should not uncache when automatic uncache is disabled", async () => {
+    await prisma.user.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.update({
+      data: {
+        string: 'updated-string'
+      },
+      where: {
+        id: 1,
+      }
+    })
+    q++;
+    await testCache();
+    await prisma.user.findMany({
+      cache: true,
+    })
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
+  await t.test("nested write operation should not uncache when automatic uncache is disabled", async () => {
+    await prisma.post.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.update({
+      data: {
+        posts: {
+          create: {
+            id: 2,
+          }
+        }
+      },
+      where: {
+        id: 1,
+      }
+    })
+    q++;
+    await testCache();
+    await prisma.post.findMany({
+      cache: true,
+    })
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
+  useClientWithAutomaticUncache = true;
+  await t.test("write operation should uncache when automatic uncache is enabled", async () => {
+    await prisma.user.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.update({
+      data: {
+        string: 'updated-string'
+      },
+      where: {
+        id: 1,
+      }
+    })
+    q++;
+    c--;
+    await testCache();
+    await prisma.user.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
+  await t.test("nested write operation should uncache when automatic uncache is enabled", async () => {
+    await prisma.post.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.update({
+      data: {
+        posts: {
+          create: {
+            id: 2,
+          }
+        }
+      },
+      where: {
+        id: 1,
+      }
+    })
+    q++;
+    c--;
+    await testCache();
+    await prisma.post.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
+  t.todo("key generation should work a function provided");
 });

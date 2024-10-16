@@ -19,10 +19,18 @@ model User {
   float     Float?
   timestamp DateTime?
   bytes     Bytes?
+
+  posts Post[] @relation("default")
+
+  mainPostId Int?
+  mainPost   Post? @relation("main", fields: [mainPostId], references: [id])
 }
 
-// model Post {
-//   id   Int     @id @default(autoincrement())
-//   text String?
+model Post {
+  id     Int     @id @default(autoincrement())
+  text   String?
+  userId Int?
+  user   User?   @relation("default", fields: [userId], references: [id])
 
-// }
+  mainUserPosts User[] @relation("main")
+}

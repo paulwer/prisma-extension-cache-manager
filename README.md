@@ -8,7 +8,7 @@ A caching extension for [Prisma](https://www.prisma.io/), fully compatible with 
 - Automatic uncaching strategy
 - Namespaces for separate caching ttl
 - Custom keys for custom caching strategies
-- Keys and Uncache-Strategy can be handled with a custom functions
+- Cache-Keys and Uncache-Keys can be handled with a custom function after data fetching
 - Only model queries can be cacheable (no $query or $queryRaw)
 
 ## Installation
@@ -76,6 +76,37 @@ async function main() {
 
 main().catch(console.error);
 ```
+
+## Customize Caching
+
+### Caching Key
+
+By default this extension will create a cache-key in the format of ```<namespace?>:<model>:<operation>@<args-hash>```.
+
+You can customize this behavior by providing one or both of the following parameters. Both parameters can also be computed by a function which gets passed the result of the query for even more customization options.
+
+**namespace** By providing a namespace you can prefix the key and handle seperate caching ttls.
+
+**key** By providing a custom key you can define how the caching key is generated. When using a custom key, the cache key will be generated as following: ```<key>``` or ```<namespace>:<key>```.
+
+### Automatic Uncaching
+
+When a write-operation was performed on a model, all cache-data for this model will be removed. We also support nested write operations.
+
+**Important Notice:** This will only work for the default caching keys.
+
+### TTL
+
+You can customize the ttl of the cache key. The plugin will use the first ttl only when originaly creating the cache entry.
+
+## Planned features
+
+- more granular automatic uncaching
+
+## Limitations & Important Considderations
+
+1. Be carefull when using custom cache-keys and automatic-uncaching. If you produce an overlay it could happen, that more cache entries gets deleted than exspected.
+2. Automatic Uncaching only works when using @prisma/client. Custom generated client which are loaded from another origin/package are not supported yet.
 
 ## Credit
 

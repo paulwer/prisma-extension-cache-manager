@@ -1,6 +1,6 @@
 {
   "name": "@paulwer/prisma-extension-cache-manager",
-  "version": "2.2.0",
+  "version": "2.3.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/paulwer/prisma-extension-cache-manager.git"
@@ -37,7 +37,7 @@
     "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write .",
-    "pretest": "prisma db push --force-reset --accept-data-loss --schema=./test/prisma/schema.prisma",
+    "pretest": "prisma db push --force-reset --accept-data-loss",
     "test": "node --test --test-only --require ts-node/register ./test/main.test.ts",
     "prepublishOnly": "npm run test",
     "publish-npm": "npm run format && npm run build && npm publish"
@@ -45,7 +45,7 @@
   "devDependencies": {
     "@types/node": "^20.10.6",
     "prettier": "^3.1.1",
-    "prisma": "^5.7.1",
+    "prisma": "^5.21.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
@@ -59,7 +59,8 @@
     ]
   },
   "dependencies": {
-    "@prisma/client": "^5.7.1",
+    "@paulwer/prisma-extension-cache-manager": "file:",
+    "@prisma/client": "^5.21.0",
     "cache-manager": "^5.2.1",
     "safe-stable-stringify": "^2.5.0"
   }

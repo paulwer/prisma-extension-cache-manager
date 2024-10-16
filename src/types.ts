@@ -1,7 +1,6 @@
 import { Operation } from "@prisma/client/runtime/library";
-import { Prisma } from "@prisma/client/extension";
 import { Cache } from "cache-manager";
-import { PrismaPromise } from "@prisma/client";
+import { Prisma, PrismaPromise } from "@prisma/client";
 
 export const CACHE_OPERATIONS = [
   "findMany",
@@ -109,16 +108,28 @@ export interface PrismaCacheArgs<
 > {
   cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
-    | ((result: Prisma.Result<T, A, O>) => string[] | string)
-    | string
-    | string[]
-    | {
-        key: string;
-        namespace?: string;
-      }[];
+  | ((result: Prisma.Result<T, A, O>) => string[] | string)
+  | string
+  | string[]
+  | {
+    key: string;
+    namespace?: string;
+  }[];
 }
 
-export interface PrismaRedisCacheConfig {
+export type PrismaExtensionCacheConfig = {
   cache: Cache;
   defaultTTL?: number;
-}
+  /**
+   * when active the cache extension will automaticly uncache cache values from storage when a write operation has happend.
+   *
+   * **ImportantNote:** If you are using a custom client please provide the prisma typings with property *prisma*.
+   */
+  useAutoUncache?: boolean;
+  /**
+   * prisma typings from a custom client other than *@prisma/client*.
+   *
+   * You may have to use ```{ prisma: Prisma as typeof Prisma }```
+   */
+  prisma?: typeof Prisma;
+};

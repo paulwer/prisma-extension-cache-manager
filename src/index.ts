@@ -1,67 +1,13 @@
 import {
   CACHE_OPERATIONS,
   ModelExtension,
-  PrismaRedisCacheConfig,
+  PrismaExtensionCacheConfig,
   WRITE_OPERATIONS,
 } from "./types";
-import { createHash } from "crypto";
-import { Prisma } from "@prisma/client/extension";
-import { Decimal } from "@prisma/client/runtime/library";
-import { stringify } from "safe-stable-stringify";
+import { generateComposedKey, serializeData, deserializeData, createKey, getInvolvedModels } from './methods';
+import { Prisma } from "@prisma/client";
 
-export function generateComposedKey(options: {
-  model: string;
-  operation: string;
-  namespace?: string;
-  queryArgs: any;
-}): string {
-  const hash = createHash("md5")
-    .update(
-      JSON.stringify(options?.queryArgs, (_, v) =>
-        typeof v === "bigint" ? v.toString() : v,
-      ),
-    )
-    .digest("hex");
-  return `${options.namespace ? `${options.namespace}:` : ""}${options.model}:${options.operation}@${hash}`;
-}
-
-function createKey(key?: string, namespace?: string): string {
-  return [namespace, key].filter((e) => !!e).join(":");
-}
-
-export function serializeData(data) {
-  function serializeCustomClasses(data) {
-    if (Decimal.isDecimal(data)) return `___decimal_${data.toString()}`;
-    if (typeof data === "bigint") return `___bigint_${data.toString()}`;
-    if (Buffer.isBuffer(data)) return `___buffer_${data.toString()}`;
-    if (data instanceof Date) return `___date_${data.toISOString()}`;
-    else if (Array.isArray(data))
-      return data.map(serializeCustomClasses); // Handle arrays
-    else if (data && typeof data === "object") {
-      const out: Record<string, any> = {};
-      for (const key in data) out[key] = serializeCustomClasses(data[key]); // Recursively serialize
-      return out;
-    } else return data;
-  }
-  return stringify({ data: serializeCustomClasses(data) });
-}
-
-export function deserializeData(serializedData) {
-  return JSON.parse(serializedData, (_key, value) => {
-    // Check if the value contains the custom marker and convert back to original class/type
-    if (typeof value === "string" && value.startsWith("___decimal_"))
-      return new Decimal(value.replace("___decimal_", ""));
-    if (typeof value === "string" && value.startsWith("___buffer_"))
-      return Buffer.from(value.replace("___buffer_", ""));
-    if (typeof value === "string" && value.startsWith("___bigint_"))
-      return BigInt(value.replace("___bigint_", ""));
-    if (typeof value === "string" && value.startsWith("___date_"))
-      return new Date(value.replace("___date_", ""));
-    return value;
-  }).data;
-}
-
-export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
+export default ({ cache, defaultTTL, useAutoUncache, prisma }: PrismaExtensionCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
@@ -86,7 +32,7 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
             ...queryArgs
           } = args as any;
 
-          function processUncache(result: any) {
+          const processUncache = async (result: any) => {
             const option = uncacheOption as any;
             let keysToDelete: string[] = [];
 
@@ -105,12 +51,19 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               }
             }
 
-            if (!keysToDelete.length) return true;
+            if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+          }
 
-            return cache.store
-              .mdel(...keysToDelete)
-              .then(() => true)
-              .catch(() => false);
+          const processAutoUncache = async () => {
+            let keysToDelete: string[] = [];
+            const models = getInvolvedModels(prisma ?? Prisma, model, args);
+
+            await Promise.all(models.map((model) => (async () => {
+              const keys = await cache.store.keys(`*:${model}:*`);
+              keysToDelete = keysToDelete.concat(keys);
+            })()))
+
+            await cache.store.mdel(...keysToDelete);
           }
 
           const useCache =
@@ -127,14 +80,16 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
 
           if (!useCache) {
             const result = await query(queryArgs);
-            if (useUncache) processUncache(result);
+            if (useUncache) await processUncache(result);
+            if (useAutoUncache && isWriteOperation) await processAutoUncache();
 
             return result;
           }
 
           if (typeof cacheOption.key === "function") {
             const result = await query(queryArgs);
-            if (useUncache) processUncache(result);
+            if (useUncache) await processUncache(result);
+            if (useAutoUncache && isWriteOperation) await processAutoUncache();
 
             const customCacheKey = cacheOption.key(result);
 
@@ -152,11 +107,11 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
               : cacheOption.key
                 ? createKey(cacheOption.key, cacheOption.namespace)
                 : generateComposedKey({
-                    model,
-                    operation,
-                    namespace: cacheOption.namespace,
-                    queryArgs,
-                  });
+                  model,
+                  operation,
+                  namespace: cacheOption.namespace,
+                  queryArgs,
+                });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);
@@ -164,7 +119,8 @@ export default ({ cache, defaultTTL }: PrismaRedisCacheConfig) => {
           }
 
           const result = await query(queryArgs);
-          if (useUncache) processUncache(result);
+          if (useUncache) await processUncache(result);
+          if (useAutoUncache && isWriteOperation) await processAutoUncache();
 
           await cache.set(
             cacheKey,
