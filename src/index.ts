@@ -63,8 +63,6 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, typePrefixes }: Pri
               keysToDelete.push(...keys.filter(key => key.includes(`:${model}:`))); // some backends may not support patter matching
             })()))
 
-            console.log(`*:${model}:*`, keysToDelete);
-
             await cache.store.mdel(...keysToDelete);
           }
 

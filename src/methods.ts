@@ -93,7 +93,5 @@ export function getInvolvedModels(prisma: typeof Prisma, modelName: string, oper
         checkInvolvedModels(modelName, args.update);
     else involvedModels.push(modelName);
 
-    console.log({ modelName, operation, relatedModels: [...new Set(involvedModels)] });
-
     return [...new Set(involvedModels)];
 }
