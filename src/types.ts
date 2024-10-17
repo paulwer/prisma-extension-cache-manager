@@ -135,7 +135,7 @@ export type PrismaExtensionCacheConfig = {
   /**
    * prefixes for custom cache rewrites. you can customize those prefixes for cases where you experience overlaps
    */
-  prefixes: {
+  typePrefixes: {
     Decimal?: string;
     BigInt?: string;
     Date?: string;
