@@ -132,4 +132,13 @@ export type PrismaExtensionCacheConfig = {
    * You may have to use ```{ prisma: Prisma as typeof Prisma }```
    */
   prisma?: typeof Prisma;
+  /**
+   * prefixes for custom cache rewrites. you can customize those prefixes for cases where you experience overlaps
+   */
+  prefixes: {
+    Decimal?: string;
+    BigInt?: string;
+    Date?: string;
+    Buffer?: string;
+  }
 };

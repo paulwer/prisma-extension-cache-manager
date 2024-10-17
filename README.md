@@ -99,6 +99,10 @@ When a write-operation was performed on a model, all cache-data for this model w
 
 You can customize the ttl of the cache key. The plugin will use the first ttl only when originaly creating the cache entry.
 
+### (De-)Serialization
+
+This plugin serialize/deserialize some classes used by prisma to string with a prefix to deserialize it back when using cache later. You can customize this behavior by passing the prefixes property to the plugin while initialization.
+
 ## Planned features
 
 - more granular automatic uncaching

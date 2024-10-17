@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { createHash } from "crypto";
 import stringify from "safe-stable-stringify";
+import { PrismaExtensionCacheConfig } from "./types";
 
 export function generateComposedKey(options: {
     model: string;
@@ -23,12 +24,12 @@ export function createKey(key?: string, namespace?: string): string {
     return [namespace, key].filter((e) => !!e).join(":");
 }
 
-export function serializeData(data) {
-    function serializeCustomClasses(data) {
-        if (Decimal.isDecimal(data)) return `___decimal_${data.toString()}`;
-        if (typeof data === "bigint") return `___bigint_${data.toString()}`;
-        if (Buffer.isBuffer(data)) return `___buffer_${data.toString()}`;
-        if (data instanceof Date) return `___date_${data.toISOString()}`;
+export function serializeData(data: any, prefixes: PrismaExtensionCacheConfig['prefixes']) {
+    function serializeCustomClasses(data: any) {
+        if (Decimal.isDecimal(data)) return `${prefixes?.Decimal || '___decimal_'}${data.toString()}`;
+        if (typeof data === "bigint") return `${prefixes?.BigInt || '___bigint_'}${data.toString()}`;
+        if (Buffer.isBuffer(data)) return `${prefixes?.Buffer || '___buffer_'}${data.toString()}`;
+        if (data instanceof Date) return `${prefixes?.Date || '___date_'}${data.toISOString()}`;
         else if (Array.isArray(data))
             return data.map(serializeCustomClasses); // Handle arrays
         else if (data && typeof data === "object") {
@@ -40,17 +41,17 @@ export function serializeData(data) {
     return stringify({ data: serializeCustomClasses(data) });
 }
 
-export function deserializeData(serializedData) {
+export function deserializeData(serializedData: any, prefixes: PrismaExtensionCacheConfig['prefixes']) {
     return JSON.parse(serializedData, (_key, value) => {
         // Check if the value contains the custom marker and convert back to original class/type
-        if (typeof value === "string" && value.startsWith("___decimal_"))
-            return new Decimal(value.replace("___decimal_", ""));
-        if (typeof value === "string" && value.startsWith("___buffer_"))
-            return Buffer.from(value.replace("___buffer_", ""));
-        if (typeof value === "string" && value.startsWith("___bigint_"))
-            return BigInt(value.replace("___bigint_", ""));
-        if (typeof value === "string" && value.startsWith("___date_"))
-            return new Date(value.replace("___date_", ""));
+        if (typeof value === "string" && value.startsWith(prefixes?.Decimal || '___decimal_'))
+            return new Decimal(value.replace(prefixes?.Decimal || '___decimal_', ""));
+        if (typeof value === "string" && value.startsWith(prefixes?.Buffer || "___buffer_"))
+            return Buffer.from(value.replace(prefixes?.Buffer || "___buffer_", ""));
+        if (typeof value === "string" && value.startsWith(prefixes?.BigInt || "___bigint_"))
+            return BigInt(value.replace(prefixes?.BigInt || "___bigint_", ""));
+        if (typeof value === "string" && value.startsWith(prefixes?.Date || "___date_"))
+            return new Date(value.replace(prefixes?.Date || "___date_", ""));
         return value;
     }).data;
 }
