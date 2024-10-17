@@ -24,7 +24,7 @@ export function createKey(key?: string, namespace?: string): string {
     return [namespace, key].filter((e) => !!e).join(":");
 }
 
-export function serializeData(data: any, prefixes: PrismaExtensionCacheConfig['prefixes']) {
+export function serializeData(data: any, prefixes?: PrismaExtensionCacheConfig['typePrefixes']) {
     function serializeCustomClasses(data: any) {
         if (Decimal.isDecimal(data)) return `${prefixes?.Decimal || '___decimal_'}${data.toString()}`;
         if (typeof data === "bigint") return `${prefixes?.BigInt || '___bigint_'}${data.toString()}`;
@@ -41,7 +41,7 @@ export function serializeData(data: any, prefixes: PrismaExtensionCacheConfig['p
     return stringify({ data: serializeCustomClasses(data) });
 }
 
-export function deserializeData(serializedData: any, prefixes: PrismaExtensionCacheConfig['prefixes']) {
+export function deserializeData(serializedData: any, prefixes?: PrismaExtensionCacheConfig['typePrefixes']) {
     return JSON.parse(serializedData, (_key, value) => {
         // Check if the value contains the custom marker and convert back to original class/type
         if (typeof value === "string" && value.startsWith(prefixes?.Decimal || '___decimal_'))

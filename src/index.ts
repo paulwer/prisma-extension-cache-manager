@@ -7,7 +7,7 @@ import {
 import { generateComposedKey, serializeData, deserializeData, createKey, getInvolvedModels } from './methods';
 import { Prisma } from "@prisma/client";
 
-export default ({ cache, defaultTTL, useAutoUncache, prisma, prefixes }: PrismaExtensionCacheConfig) => {
+export default ({ cache, defaultTTL, useAutoUncache, prisma, typePrefixes }: PrismaExtensionCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
@@ -95,7 +95,7 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, prefixes }: PrismaE
 
             cache.set(
               customCacheKey,
-              serializeData(result, prefixes),
+              serializeData(result, typePrefixes),
               cacheOption.ttl ?? defaultTTL,
             );
             return result;
@@ -115,7 +115,7 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, prefixes }: PrismaE
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);
-            if (cached) return deserializeData(cached, prefixes);
+            if (cached) return deserializeData(cached, typePrefixes);
           }
 
           const result = await query(queryArgs);
@@ -124,7 +124,7 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, prefixes }: PrismaE
 
           await cache.set(
             cacheKey,
-            serializeData(result, prefixes),
+            serializeData(result, typePrefixes),
             cacheOption.ttl ?? defaultTTL,
           );
           return result;
