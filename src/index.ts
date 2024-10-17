@@ -55,13 +55,15 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, typePrefixes }: Pri
           }
 
           const processAutoUncache = async () => {
-            let keysToDelete: string[] = [];
-            const models = getInvolvedModels(prisma ?? Prisma, model, args);
+            const keysToDelete: string[] = [];
+            const models = getInvolvedModels(prisma ?? Prisma, model, operation, args);
 
             await Promise.all(models.map((model) => (async () => {
               const keys = await cache.store.keys(`*:${model}:*`);
-              keysToDelete = keysToDelete.concat(keys);
+              keysToDelete.push(...keys.filter(key => key.includes(`:${model}:`))); // some backends may not support patter matching
             })()))
+
+            console.log(`*:${model}:*`, keysToDelete);
 
             await cache.store.mdel(...keysToDelete);
           }

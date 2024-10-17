@@ -396,6 +396,32 @@ test("cacheExtension", { only: true }, async (t) => {
   });
   await reset(); // recreate the data because we have done write operations
 
+  await t.test("upsert write operation should not uncache when automatic uncache is disabled", async () => {
+    await prisma.user.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.upsert({
+      create: {
+        id: 2,
+        string: 'updated-string'
+      },
+      update: {},
+      where: {
+        id: 2,
+      }
+    })
+    q++;
+    await testCache();
+    await prisma.user.findMany({
+      cache: true,
+    })
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
   useClientWithAutomaticUncache = true;
   await t.test("write operation should uncache when automatic uncache is enabled", async () => {
     await prisma.user.findMany({
@@ -455,5 +481,59 @@ test("cacheExtension", { only: true }, async (t) => {
   });
   await reset(); // recreate the data because we have done write operations
 
-  t.todo("key generation should work a function provided");
+  await t.test("upsert write operation should uncache when automatic uncache is enabled", async () => {
+    await prisma.user.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.upsert({
+      create: {
+        id: 2,
+        string: 'updated-string'
+      },
+      update: {},
+      where: {
+        id: 2,
+      }
+    })
+    q++;
+    c--;
+    await testCache();
+    await prisma.user.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
+  await t.test("write operation should not uncache other model when automatic uncache is enabled", async () => {
+    await prisma.post.findMany({
+      cache: true,
+    })
+    q++;
+    c++;
+    await testCache();
+    await prisma.user.update({
+      data: {
+        string: 'updated-string'
+      },
+      where: {
+        id: 1,
+      }
+    })
+    q++;
+    await testCache();
+    await prisma.post.findMany({
+      cache: true,
+    })
+    await testCache();
+  });
+  await reset(); // recreate the data because we have done write operations
+
+  t.todo("custom cache typePrefixes should be used and value should be parseable");
+  t.todo("key generation should work with a function provided");
 });

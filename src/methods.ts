@@ -57,29 +57,43 @@ export function deserializeData(serializedData: any, prefixes?: PrismaExtensionC
 }
 
 // Utility to detect related models from query arguments
-export function getInvolvedModels(prisma: typeof Prisma, modelName: string, args: any): string[] {
+export function getInvolvedModels(prisma: typeof Prisma, modelName: string, operation: string, args: any): string[] {
     const model = prisma.dmmf.datamodel.models.find(m => m.name === modelName)!;
-    const involvedModels: string[] = [modelName];
+    const involvedModels: string[] = [];
 
-    for (const field in args.data) {
-        if (model.fields.some(f => f.name === field && f.kind === 'object')) {
-            // If the field represents a relation, add it to involvedModels
-            const relatedField = model.fields.find(f => f.name === field);
+    const checkInvolvedModels = (modelName: string, args: any) => {
+        involvedModels.push(modelName);
+        for (const field in args) {
+            if (model.fields.some(f => f.name === field && f.kind === 'object')) {
+                // If the field represents a relation, add it to involvedModels
+                const relatedField = model.fields.find(f => f.name === field);
 
-            if (relatedField) {
-                const relatedModelName = relatedField.type;
-                involvedModels.push(relatedModelName);
+                if (relatedField) {
+                    const relatedModelName = relatedField.type;
+                    involvedModels.push(relatedModelName);
 
-                // Recursively check if there are further nested models
-                if (typeof args[field] === 'object') {
-                    for (const relatedMethodName in args[field]) {
-                        const nestedModels = getInvolvedModels(prisma, relatedModelName, args[field][relatedMethodName]);
-                        involvedModels.push(...nestedModels);
+                    // Recursively check if there are further nested models
+                    if (typeof args[field] === 'object') {
+                        for (const relatedMethodName in args[field]) {
+                            checkInvolvedModels(relatedModelName, args[field][relatedMethodName]);
+                        }
                     }
                 }
             }
         }
     }
+
+    if (operation == 'create' || operation == 'update' || operation == 'updateMany')
+        checkInvolvedModels(modelName, args.data);
+    else if (operation == 'createMany')
+        [args.data].flat().map((row: any) => checkInvolvedModels(modelName, row));
+    else if (operation == 'upsert' && args.create)
+        checkInvolvedModels(modelName, args.create);
+    else if (operation == 'upsert' && args.update)
+        checkInvolvedModels(modelName, args.update);
+    else involvedModels.push(modelName);
+
+    console.log({ modelName, operation, relatedModels: [...new Set(involvedModels)] });
 
     return [...new Set(involvedModels)];
 }
