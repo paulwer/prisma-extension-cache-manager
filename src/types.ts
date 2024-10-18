@@ -108,13 +108,13 @@ export interface PrismaCacheArgs<
 > {
   cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
-  | ((result: Prisma.Result<T, A, O>) => string[] | string)
-  | string
-  | string[]
-  | {
-    key: string;
-    namespace?: string;
-  }[];
+    | ((result: Prisma.Result<T, A, O>) => string[] | string)
+    | string
+    | string[]
+    | {
+        key: string;
+        namespace?: string;
+      }[];
 }
 
 export type PrismaExtensionCacheConfig = {
@@ -140,5 +140,5 @@ export type PrismaExtensionCacheConfig = {
     BigInt?: string;
     Date?: string;
     Buffer?: string;
-  }
+  };
 };

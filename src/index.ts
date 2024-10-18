@@ -4,10 +4,22 @@ import {
   PrismaExtensionCacheConfig,
   WRITE_OPERATIONS,
 } from "./types";
-import { generateComposedKey, serializeData, deserializeData, createKey, getInvolvedModels } from './methods';
+import {
+  generateComposedKey,
+  serializeData,
+  deserializeData,
+  createKey,
+  getInvolvedModels,
+} from "./methods";
 import { Prisma } from "@prisma/client";
 
-export default ({ cache, defaultTTL, useAutoUncache, prisma, typePrefixes }: PrismaExtensionCacheConfig) => {
+export default ({
+  cache,
+  defaultTTL,
+  useAutoUncache,
+  prisma,
+  typePrefixes,
+}: PrismaExtensionCacheConfig) => {
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
     client: {
@@ -52,19 +64,30 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, typePrefixes }: Pri
             }
 
             if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
-          }
+          };
 
           const processAutoUncache = async () => {
             const keysToDelete: string[] = [];
-            const models = getInvolvedModels(prisma ?? Prisma, model, operation, args);
+            const models = getInvolvedModels(
+              prisma ?? Prisma,
+              model,
+              operation,
+              args,
+            );
 
-            await Promise.all(models.map((model) => (async () => {
-              const keys = await cache.store.keys(`*:${model}:*`);
-              keysToDelete.push(...keys.filter(key => key.includes(`:${model}:`))); // some backends may not support patter matching
-            })()))
+            await Promise.all(
+              models.map((model) =>
+                (async () => {
+                  const keys = await cache.store.keys(`*:${model}:*`);
+                  keysToDelete.push(
+                    ...keys.filter((key) => key.includes(`:${model}:`)),
+                  ); // some backends may not support patter matching
+                })(),
+              ),
+            );
 
             await cache.store.mdel(...keysToDelete);
-          }
+          };
 
           const useCache =
             cacheOption !== undefined &&
@@ -107,11 +130,11 @@ export default ({ cache, defaultTTL, useAutoUncache, prisma, typePrefixes }: Pri
               : cacheOption.key
                 ? createKey(cacheOption.key, cacheOption.namespace)
                 : generateComposedKey({
-                  model,
-                  operation,
-                  namespace: cacheOption.namespace,
-                  queryArgs,
-                });
+                    model,
+                    operation,
+                    namespace: cacheOption.namespace,
+                    queryArgs,
+                  });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);

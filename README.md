@@ -81,13 +81,13 @@ main().catch(console.error);
 
 ### Caching Key
 
-By default this extension will create a cache-key in the format of ```<namespace?>:<model>:<operation>@<args-hash>```.
+By default this extension will create a cache-key in the format of `<namespace?>:<model>:<operation>@<args-hash>`.
 
 You can customize this behavior by providing one or both of the following parameters. Both parameters can also be computed by a function which gets passed the result of the query for even more customization options.
 
 **namespace** By providing a namespace you can prefix the key and handle seperate caching ttls.
 
-**key** By providing a custom key you can define how the caching key is generated. When using a custom key, the cache key will be generated as following: ```<key>``` or ```<namespace>:<key>```.
+**key** By providing a custom key you can define how the caching key is generated. When using a custom key, the cache key will be generated as following: `<key>` or `<namespace>:<key>`.
 
 ### Automatic Uncaching
 
