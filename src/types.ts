@@ -117,8 +117,8 @@ export interface PrismaCacheArgs<
   }[];
 }
 
-export interface PrismaQueryRawCacheArgs {
-  cache?: boolean | number | string | {
+export interface PrismaQueryCacheArgs {
+  cache?: number | string | {
     /**
      * Cache key
      */
