@@ -31,7 +31,7 @@ async function main() {
     ttl: 10000,
     max: 200,
   });
-  const prisma = new PrismaClient().$extends(cacheExtension({ cache }));
+  const prisma = new PrismaClient().$extends(cacheExtension({ cache, useAutoUncaching: true }));
   await prisma.user.findUniqueOrThrow({
     where: {
       email: user.email,
