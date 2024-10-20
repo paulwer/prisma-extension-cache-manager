@@ -26,7 +26,10 @@ export default ({
     name: "prisma-extension-cache-manager",
     client: {
       $cache: cache,
-      async $queryRawCached(sql: ReturnType<typeof Prisma.sql>, cacheOption?: PrismaQueryCacheArgs) {
+      async $queryRawCached(
+        sql: ReturnType<typeof Prisma.sql>,
+        cacheOption?: PrismaQueryCacheArgs,
+      ) {
         const context = (prisma || Prisma).getExtensionContext(this);
 
         const processUncache = async (result: any) => {
@@ -56,11 +59,18 @@ export default ({
           (typeof cacheOption?.uncache === "function" ||
             typeof cacheOption?.uncache === "string" ||
             Array.isArray(cacheOption?.uncache));
-        const cacheTTL = typeof cacheOption?.cache === "number" ? cacheOption?.cache : typeof cacheOption?.cache === "object" ? (cacheOption?.cache?.ttl ?? defaultTTL) : defaultTTL;
+        const cacheTTL =
+          typeof cacheOption?.cache === "number"
+            ? cacheOption?.cache
+            : typeof cacheOption?.cache === "object"
+              ? cacheOption?.cache?.ttl ?? defaultTTL
+              : defaultTTL;
 
         const cacheKey = generateComposedKey({
-          model: '$queryRaw',
-          operation: createHash("md5").update(JSON.stringify(sql.strings)).digest("hex"),
+          model: "$queryRaw",
+          operation: createHash("md5")
+            .update(JSON.stringify(sql.strings))
+            .digest("hex"),
           queryArgs: sql.values,
         });
 
@@ -79,7 +89,10 @@ export default ({
 
         return result;
       },
-      async $queryRawUnsafeCached(sql: string, cacheOption?: PrismaQueryCacheArgs) {
+      async $queryRawUnsafeCached(
+        sql: string,
+        cacheOption?: PrismaQueryCacheArgs,
+      ) {
         const context = (prisma || Prisma).getExtensionContext(this);
 
         const processUncache = async (result: any) => {
@@ -109,10 +122,15 @@ export default ({
           (typeof cacheOption?.uncache === "function" ||
             typeof cacheOption?.uncache === "string" ||
             Array.isArray(cacheOption?.uncache));
-        const cacheTTL = typeof cacheOption?.cache === "number" ? cacheOption?.cache : typeof cacheOption?.cache === "object" ? (cacheOption?.cache?.ttl ?? defaultTTL) : defaultTTL;
+        const cacheTTL =
+          typeof cacheOption?.cache === "number"
+            ? cacheOption?.cache
+            : typeof cacheOption?.cache === "object"
+              ? cacheOption?.cache?.ttl ?? defaultTTL
+              : defaultTTL;
 
         const cacheKey = generateComposedKey({
-          model: '$queryRawUnsafe',
+          model: "$queryRawUnsafe",
           operation: createHash("md5").update(sql).digest("hex"),
           queryArgs: {},
         });
@@ -208,7 +226,12 @@ export default ({
             (typeof uncacheOption === "function" ||
               typeof uncacheOption === "string" ||
               Array.isArray(uncacheOption));
-          const cacheTTL = typeof cacheOption === "number" ? cacheOption : typeof cacheOption === "object" ? (cacheOption.ttl ?? defaultTTL) : defaultTTL;
+          const cacheTTL =
+            typeof cacheOption === "number"
+              ? cacheOption
+              : typeof cacheOption === "object"
+                ? cacheOption.ttl ?? defaultTTL
+                : defaultTTL;
 
           if (!useCache) {
             const result = await query(queryArgs);
@@ -239,11 +262,11 @@ export default ({
               : cacheOption.key
                 ? createKey(cacheOption.key, cacheOption.namespace)
                 : generateComposedKey({
-                  model,
-                  operation,
-                  namespace: cacheOption.namespace,
-                  queryArgs,
-                });
+                    model,
+                    operation,
+                    namespace: cacheOption.namespace,
+                    queryArgs,
+                  });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);

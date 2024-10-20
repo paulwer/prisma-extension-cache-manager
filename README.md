@@ -5,11 +5,11 @@ A caching extension for [Prisma](https://www.prisma.io/), fully compatible with 
 ## Features
 
 - full [cache-manager](https://www.npmjs.com/package/cache-manager) compatibility => also supports external storages like redis (see cache-manager)
+- Model queries and custom queries are cacheable (additional methods $queryRawCached or $queryRawUnsafeCached)
 - Automatic uncaching strategy
 - Namespaces for separate caching ttl
 - Custom keys for custom caching strategies
 - Cache-Keys and Uncache-Keys can be handled with a custom function after data fetching
-- Only model queries can be cacheable (no $query or $queryRaw)
 
 ## Installation
 
@@ -31,7 +31,9 @@ async function main() {
     ttl: 10000,
     max: 200,
   });
-  const prisma = new PrismaClient().$extends(cacheExtension({ cache, useAutoUncaching: true }));
+  const prisma = new PrismaClient().$extends(
+    cacheExtension({ cache, useAutoUncaching: true }),
+  );
   await prisma.user.findUniqueOrThrow({
     where: {
       email: user.email,
@@ -57,7 +59,7 @@ async function main() {
     data: {},
     cache: {
       ttl: 2000,
-      key: (result) => `user-${user.id}`, // custom cache key by result (There will be no reading from the cache, only a write down)
+      key: (result) => `user-${result.id}`, // custom cache key by result (There will be no reading from the cache, only a write down)
     },
   });
   await prisma.user.create({
@@ -68,10 +70,31 @@ async function main() {
     data: {},
     cache: {
       ttl: 2000,
-      key: (result) => `user-${user.id}`, // custom cache key by result (There will be no reading from the cache, only a write down)
+      key: (result) => `user-${result.id}`, // custom cache key by result (There will be no reading from the cache, only a write down)
     },
     uncache: [`user_count`, `users`], // delete keys from cache
   });
+  // Custom Queries
+  await prisma.$queryRawCached(
+    Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`,
+    {
+      cache: {
+        namespace: "test",
+        ttl: 2000,
+        key: (result) => `user-${result[0].id}`, // custom cache key by result (There will be no reading from the cache, only a write down)
+      },
+      uncache: [`user_count`, `users`], // delete keys from cache
+    },
+  );
+  await prisma.$queryRawUnsafeCached(
+    Prisma.sql`SELECT * FROM "User" WHERE id = 1`,
+    {
+      cache: "custom_query1",
+      uncache: {
+        namespace: "test", // delete keys from cache
+      },
+    },
+  );
 }
 
 main().catch(console.error);
@@ -106,6 +129,7 @@ This plugin serialize/deserialize some classes used by prisma to string with a p
 ## Planned features
 
 - more granular automatic uncaching
+- performance improvements for uncaching
 
 ## Limitations & Important Considderations
 

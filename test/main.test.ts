@@ -558,25 +558,38 @@ test("cacheExtension", { only: true }, async (t) => {
   );
   await reset(); // recreate the data because we have done write operations
 
-  // t.todo("custom cache typePrefixes should be used and value should be parseable");
-  // t.todo("key generation should work with a function provided");
+  t.todo(
+    "custom cache typePrefixes should be used and value should be parseable",
+  );
+  t.todo("key generation should work with a function provided");
 
   // RAW QUERIES
   await t.test("queryRawCached should use cache when reused", async () => {
-    await prisma.$queryRawCached(Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`);
+    await prisma.$queryRawCached(
+      Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`,
+    );
     q++;
     c++;
     await testCache();
-    await prisma.$queryRawCached(Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`);
+    await prisma.$queryRawCached(
+      Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`,
+    );
     await testCache();
   });
-  await t.test("queryRawUnsafeCached should use cache when reused", async () => {
-    await prisma.$queryRawUnsafeCached(`SELECT * FROM "User" WHERE id = ${1}`);
-    q++;
-    c++;
-    await testCache();
-    await prisma.$queryRawUnsafeCached(`SELECT * FROM "User" WHERE id = ${1}`);
-    await testCache();
-  });
-  // t.todo("additional tests for queryRawCached should be implemented");
+  await t.test(
+    "queryRawUnsafeCached should use cache when reused",
+    async () => {
+      await prisma.$queryRawUnsafeCached(
+        `SELECT * FROM "User" WHERE id = ${1}`,
+      );
+      q++;
+      c++;
+      await testCache();
+      await prisma.$queryRawUnsafeCached(
+        `SELECT * FROM "User" WHERE id = ${1}`,
+      );
+      await testCache();
+    },
+  );
+  t.todo("additional tests for queryRawCached should be implemented");
 });

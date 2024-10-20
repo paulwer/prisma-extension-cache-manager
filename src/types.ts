@@ -108,39 +108,42 @@ export interface PrismaCacheArgs<
 > {
   cache?: boolean | number | string | CacheOptions<T, A, O>;
   uncache?:
-  | ((result: Prisma.Result<T, A, O>) => string[] | string)
-  | string
-  | string[]
-  | {
-    key: string;
-    namespace?: string;
-  }[];
+    | ((result: Prisma.Result<T, A, O>) => string[] | string)
+    | string
+    | string[]
+    | {
+        key: string;
+        namespace?: string;
+      }[];
 }
 
 export interface PrismaQueryCacheArgs {
-  cache?: number | string | {
-    /**
-     * Cache key
-     */
-    key?: ((result: any) => string) | string;
+  cache?:
+    | number
+    | string
+    | {
+        /**
+         * Cache key
+         */
+        key?: ((result: any) => string) | string;
 
-    /**
-     * Cache namespace
-     */
-    namespace?: string;
-    /**
-     * Time to live
-     */
-    ttl?: number;
-  };
+        /**
+         * Cache namespace
+         */
+        namespace?: string;
+        /**
+         * Time to live
+         */
+        ttl?: number;
+      };
   uncache?:
-  | ((result: any) => string[] | string)
-  | string
-  | string[]
-  | {
-    key: string;
-    namespace?: string;
-  }[];
+    | ((result: any) => string[] | string)
+    | string
+    | string[]
+    | {
+        key: string;
+        namespace?: string;
+      }[];
 }
 
 export type PrismaExtensionCacheConfig = {

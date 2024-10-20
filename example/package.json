@@ -4,7 +4,7 @@
     "dev": "ts-node index.ts"
   },
   "dependencies": {
-    "@paulwer/prisma-extension-cache-manager": "2.3.3",
+    "@paulwer/prisma-extension-cache-manager": "2.4.0",
     "@prisma/client": "^5.21.0",
     "cache-manager": "^5.2.3",
     "example": "file:"
