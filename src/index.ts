@@ -2,6 +2,7 @@ import {
   CACHE_OPERATIONS,
   ModelExtension,
   PrismaExtensionCacheConfig,
+  PrismaQueryRawCacheArgs,
   WRITE_OPERATIONS,
 } from "./types";
 import {
@@ -12,6 +13,7 @@ import {
   getInvolvedModels,
 } from "./methods";
 import { Prisma } from "@prisma/client";
+import { createHash } from "crypto";
 
 export default ({
   cache,
@@ -24,6 +26,72 @@ export default ({
     name: "prisma-extension-cache-manager",
     client: {
       $cache: cache,
+      async $queryRawCached(sql: ReturnType<typeof Prisma.sql>, cacheOption?: PrismaQueryRawCacheArgs) {
+        const context = (prisma || Prisma).getExtensionContext(this);
+
+        const processUncache = async (result: any) => {
+          const option = cacheOption?.uncache as any;
+          let keysToDelete: string[] = [];
+
+          if (typeof option === "function") {
+            const keys = option(result);
+            keysToDelete = Array.isArray(keys) ? keys : [keys];
+          } else if (typeof option === "string") {
+            keysToDelete = [option];
+          } else if (Array.isArray(option)) {
+            if (typeof option[0] === "string") {
+              keysToDelete = option;
+            } else if (typeof option[0] === "object") {
+              keysToDelete = option.map((obj) =>
+                obj.namespace ? `${obj.namespace}:${obj.key}` : obj.key,
+              );
+            }
+          }
+
+          if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+        };
+
+        const useCache =
+          cacheOption?.cache !== undefined &&
+          ["boolean", "object", "number", "string"].includes(
+            typeof cacheOption?.cache,
+          ) &&
+          !(typeof cacheOption?.cache === "boolean" && cacheOption?.cache === false);
+        const useUncache =
+          cacheOption?.uncache !== undefined &&
+          (typeof cacheOption?.uncache === "function" ||
+            typeof cacheOption?.uncache === "string" ||
+            Array.isArray(cacheOption?.uncache));
+
+
+        if (!useCache) {
+          const result = await context.$queryRaw(sql);
+          if (useUncache) await processUncache(result);
+
+          return result;
+        }
+
+        const cacheKey = generateComposedKey({
+          model: '$queryRaw',
+          operation: createHash("md5").update(JSON.stringify(sql.strings)).digest("hex"),
+          queryArgs: sql.values,
+        });
+
+        const cached = await cache.get(cacheKey);
+        if (cached) return deserializeData(cached, typePrefixes);
+
+        const result = await context.$queryRaw(sql);
+        if (useUncache) await processUncache(result);
+
+        await cache.set(
+          cacheKey,
+          serializeData(result, typePrefixes),
+          typeof cacheOption?.cache === "object" ? (cacheOption?.cache?.ttl ?? defaultTTL) : defaultTTL,
+        );
+        if (useUncache) await processUncache(result);
+        
+        return result;
+      },
     },
     model: {
       $allModels: {} as ModelExtension,
@@ -130,11 +198,11 @@ export default ({
               : cacheOption.key
                 ? createKey(cacheOption.key, cacheOption.namespace)
                 : generateComposedKey({
-                    model,
-                    operation,
-                    namespace: cacheOption.namespace,
-                    queryArgs,
-                  });
+                  model,
+                  operation,
+                  namespace: cacheOption.namespace,
+                  queryArgs,
+                });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);
