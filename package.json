@@ -39,8 +39,7 @@
     "format": "prettier --write .",
     "pretest": "prisma db push --force-reset --accept-data-loss",
     "test": "node --test --test-only --require ts-node/register ./test/main.test.ts",
-    "prepublishOnly": "npm run test",
-    "publish-npm": "npm run format && npm run build && npm publish"
+    "prepublishOnly": "npm run format && npm run build && npm run test"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

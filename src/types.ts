@@ -117,6 +117,32 @@ export interface PrismaCacheArgs<
   }[];
 }
 
+export interface PrismaQueryCacheArgs {
+  cache?: number | string | {
+    /**
+     * Cache key
+     */
+    key?: ((result: any) => string) | string;
+
+    /**
+     * Cache namespace
+     */
+    namespace?: string;
+    /**
+     * Time to live
+     */
+    ttl?: number;
+  };
+  uncache?:
+  | ((result: any) => string[] | string)
+  | string
+  | string[]
+  | {
+    key: string;
+    namespace?: string;
+  }[];
+}
+
 export type PrismaExtensionCacheConfig = {
   cache: Cache;
   defaultTTL?: number;
@@ -140,5 +166,5 @@ export type PrismaExtensionCacheConfig = {
     BigInt?: string;
     Date?: string;
     Buffer?: string;
-  }
+  };
 };

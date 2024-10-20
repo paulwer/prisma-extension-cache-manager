@@ -4,7 +4,7 @@ import * as cm from "cache-manager";
 import assert from "node:assert";
 import test from "node:test";
 import cacheExtension from "../src";
-import { deserializeData, generateComposedKey } from "../src/methods"
+import { deserializeData, generateComposedKey } from "../src/methods";
 import { OPTIONAL_ARGS_OPERATIONS, READ_OPERATIONS } from "../src/types";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -17,7 +17,10 @@ test("cacheExtension", { only: true }, async (t) => {
 
   // regenerate client to reset metrics
   let useClientWithAutomaticUncache = false;
-  const getClient = () => new PrismaClient().$extends(cacheExtension({ cache, useAutoUncache: useClientWithAutomaticUncache }));
+  const getClient = () =>
+    new PrismaClient().$extends(
+      cacheExtension({ cache, useAutoUncache: useClientWithAutomaticUncache }),
+    );
 
   let prisma = getClient();
   assert(prisma.$cache === cache);
@@ -61,11 +64,11 @@ test("cacheExtension", { only: true }, async (t) => {
         posts: {
           create: {
             id: 1,
-          }
-        }
+          },
+        },
       },
     });
-  }
+  };
 
   const user = await reset();
 
@@ -344,196 +347,236 @@ test("cacheExtension", { only: true }, async (t) => {
   });
 
   // TEST FOR AUTOMATIC UNCACHE
-  await t.test("write operation should not uncache when automatic uncache is disabled", async () => {
-    await prisma.user.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-    await prisma.user.update({
-      data: {
-        string: 'updated-string'
-      },
-      where: {
-        id: 1,
-      }
-    })
-    q++;
-    await testCache();
-    await prisma.user.findMany({
-      cache: true,
-    })
-    await testCache();
-  });
+  await t.test(
+    "write operation should not uncache when automatic uncache is disabled",
+    async () => {
+      await prisma.user.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.update({
+        data: {
+          string: "updated-string",
+        },
+        where: {
+          id: 1,
+        },
+      });
+      q++;
+      await testCache();
+      await prisma.user.findMany({
+        cache: true,
+      });
+      await testCache();
+    },
+  );
   await reset(); // recreate the data because we have done write operations
 
-  await t.test("nested write operation should not uncache when automatic uncache is disabled", async () => {
-    await prisma.post.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-    await prisma.user.update({
-      data: {
-        posts: {
-          create: {
-            id: 2,
-          }
-        }
-      },
-      where: {
-        id: 1,
-      }
-    })
-    q++;
-    await testCache();
-    await prisma.post.findMany({
-      cache: true,
-    })
-    await testCache();
-  });
+  await t.test(
+    "nested write operation should not uncache when automatic uncache is disabled",
+    async () => {
+      await prisma.post.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.update({
+        data: {
+          posts: {
+            create: {
+              id: 2,
+            },
+          },
+        },
+        where: {
+          id: 1,
+        },
+      });
+      q++;
+      await testCache();
+      await prisma.post.findMany({
+        cache: true,
+      });
+      await testCache();
+    },
+  );
   await reset(); // recreate the data because we have done write operations
 
-  await t.test("upsert write operation should not uncache when automatic uncache is disabled", async () => {
-    await prisma.user.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-    await prisma.user.upsert({
-      create: {
-        id: 2,
-        string: 'updated-string'
-      },
-      update: {},
-      where: {
-        id: 2,
-      }
-    })
-    q++;
-    await testCache();
-    await prisma.user.findMany({
-      cache: true,
-    })
-    await testCache();
-  });
+  await t.test(
+    "upsert write operation should not uncache when automatic uncache is disabled",
+    async () => {
+      await prisma.user.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.upsert({
+        create: {
+          id: 2,
+          string: "updated-string",
+        },
+        update: {},
+        where: {
+          id: 2,
+        },
+      });
+      q++;
+      await testCache();
+      await prisma.user.findMany({
+        cache: true,
+      });
+      await testCache();
+    },
+  );
   await reset(); // recreate the data because we have done write operations
 
   useClientWithAutomaticUncache = true;
-  await t.test("write operation should uncache when automatic uncache is enabled", async () => {
-    await prisma.user.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-    await prisma.user.update({
-      data: {
-        string: 'updated-string'
-      },
-      where: {
-        id: 1,
-      }
-    })
-    q++;
-    c--;
-    await testCache();
-    await prisma.user.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-  });
+  await t.test(
+    "write operation should uncache when automatic uncache is enabled",
+    async () => {
+      await prisma.user.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.update({
+        data: {
+          string: "updated-string",
+        },
+        where: {
+          id: 1,
+        },
+      });
+      q++;
+      c--;
+      await testCache();
+      await prisma.user.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+    },
+  );
   await reset(); // recreate the data because we have done write operations
 
-  await t.test("nested write operation should uncache when automatic uncache is enabled", async () => {
-    await prisma.post.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-    await prisma.user.update({
-      data: {
-        posts: {
-          create: {
-            id: 2,
-          }
-        }
-      },
-      where: {
-        id: 1,
-      }
-    })
-    q++;
-    c--;
-    await testCache();
-    await prisma.post.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-  });
+  await t.test(
+    "nested write operation should uncache when automatic uncache is enabled",
+    async () => {
+      await prisma.post.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.update({
+        data: {
+          posts: {
+            create: {
+              id: 2,
+            },
+          },
+        },
+        where: {
+          id: 1,
+        },
+      });
+      q++;
+      c--;
+      await testCache();
+      await prisma.post.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+    },
+  );
   await reset(); // recreate the data because we have done write operations
 
-  await t.test("upsert write operation should uncache when automatic uncache is enabled", async () => {
-    await prisma.user.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-    await prisma.user.upsert({
-      create: {
-        id: 2,
-        string: 'updated-string'
-      },
-      update: {},
-      where: {
-        id: 2,
-      }
-    })
-    q++;
-    c--;
-    await testCache();
-    await prisma.user.findMany({
-      cache: true,
-    })
-    q++;
-    c++;
-    await testCache();
-  });
+  await t.test(
+    "upsert write operation should uncache when automatic uncache is enabled",
+    async () => {
+      await prisma.user.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.upsert({
+        create: {
+          id: 2,
+          string: "updated-string",
+        },
+        update: {},
+        where: {
+          id: 2,
+        },
+      });
+      q++;
+      c--;
+      await testCache();
+      await prisma.user.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+    },
+  );
   await reset(); // recreate the data because we have done write operations
 
-  await t.test("write operation should not uncache other model when automatic uncache is enabled", async () => {
-    await prisma.post.findMany({
-      cache: true,
-    })
+  await t.test(
+    "write operation should not uncache other model when automatic uncache is enabled",
+    async () => {
+      await prisma.post.findMany({
+        cache: true,
+      });
+      q++;
+      c++;
+      await testCache();
+      await prisma.user.update({
+        data: {
+          string: "updated-string",
+        },
+        where: {
+          id: 1,
+        },
+      });
+      q++;
+      await testCache();
+      await prisma.post.findMany({
+        cache: true,
+      });
+      await testCache();
+    },
+  );
+  await reset(); // recreate the data because we have done write operations
+
+  // t.todo("custom cache typePrefixes should be used and value should be parseable");
+  // t.todo("key generation should work with a function provided");
+
+  // RAW QUERIES
+  await t.test("queryRawCached should use cache when reused", async () => {
+    await prisma.$queryRawCached(Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`);
     q++;
     c++;
     await testCache();
-    await prisma.user.update({
-      data: {
-        string: 'updated-string'
-      },
-      where: {
-        id: 1,
-      }
-    })
-    q++;
-    await testCache();
-    await prisma.post.findMany({
-      cache: true,
-    })
+    await prisma.$queryRawCached(Prisma.sql`SELECT * FROM "User" WHERE id = ${1}`);
     await testCache();
   });
-  await reset(); // recreate the data because we have done write operations
-
-  t.todo("custom cache typePrefixes should be used and value should be parseable");
-  t.todo("key generation should work with a function provided");
+  await t.test("queryRawUnsafeCached should use cache when reused", async () => {
+    await prisma.$queryRawUnsafeCached(`SELECT * FROM "User" WHERE id = ${1}`);
+    q++;
+    c++;
+    await testCache();
+    await prisma.$queryRawUnsafeCached(`SELECT * FROM "User" WHERE id = ${1}`);
+    await testCache();
+  });
+  // t.todo("additional tests for queryRawCached should be implemented");
 });
