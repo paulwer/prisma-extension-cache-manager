@@ -592,4 +592,5 @@ test("cacheExtension", { only: true }, async (t) => {
     },
   );
   t.todo("additional tests for queryRawCached should be implemented");
+  t.todo("additional tests for deduplication");
 });

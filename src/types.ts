@@ -150,6 +150,10 @@ export type PrismaExtensionCacheConfig = {
   cache: Cache;
   defaultTTL?: number;
   /**
+   * when active a map of pending promisses will be kept on your local server to deduplicate similar requests
+   */
+  useDeduplication?: boolean;
+  /**
    * when active the cache extension will automaticly uncache cache values from storage when a write operation has happend.
    *
    * **ImportantNote:** If you are using a custom client please provide the prisma typings with property *prisma*.

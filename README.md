@@ -10,6 +10,7 @@ A caching extension for [Prisma](https://www.prisma.io/), fully compatible with 
 - Namespaces for separate caching ttl
 - Custom keys for custom caching strategies
 - Cache-Keys and Uncache-Keys can be handled with a custom function after data fetching
+- Deduplicate concurrent queries
 
 ## Installation
 
@@ -118,6 +119,12 @@ When a write-operation was performed on a model, all cache-data for this model w
 
 **Important Notice:** This will only work for the default caching keys.
 
+### Deduplication
+
+When using deduplication a map of running promisses is kept on your local server to deduplicate requests with the same cache-key.
+
+**Important Notice:** Deduplication is not supported for custom key functions as they determine the cache-key after the execution.
+
 ### TTL
 
 You can customize the ttl of the cache key. The plugin will use the first ttl only when originaly creating the cache entry.
@@ -135,6 +142,7 @@ This plugin serialize/deserialize some classes used by prisma to string with a p
 
 1. Be carefull when using custom cache-keys and automatic-uncaching. If you produce an overlay it could happen, that more cache entries gets deleted than exspected.
 2. Automatic Uncaching only works when using @prisma/client. Custom generated client which are loaded from another origin/package are not supported yet.
+3. when using custom key generator functions, you cannot rely on a cache for this function. those should only be used to generate the cache for other functions.
 
 ## Credit
 

@@ -15,10 +15,13 @@ import {
 import { Prisma } from "@prisma/client";
 import { createHash } from "crypto";
 
+const promiseCache: { [key: string]: Promise<any> } = {};
+
 export default ({
   cache,
   defaultTTL,
   useAutoUncache,
+  useDeduplication,
   prisma,
   typePrefixes,
 }: PrismaExtensionCacheConfig) => {
@@ -77,7 +80,15 @@ export default ({
         const cached = await cache.get(cacheKey);
         if (cached) return deserializeData(cached, typePrefixes);
 
-        const result = await context.$queryRaw(sql);
+        let queryPromise: Promise<any> | undefined;
+        if (useDeduplication) {
+          if (!promiseCache[cacheKey])
+            promiseCache[cacheKey] = context.$queryRaw(sql);
+          queryPromise = promiseCache[cacheKey];
+        } else queryPromise = context.$queryRaw(sql);
+        const result = await queryPromise.finally(
+          () => delete promiseCache[cacheKey],
+        );
         if (useUncache) await processUncache(result);
 
         await cache.set(
@@ -138,7 +149,15 @@ export default ({
         const cached = await cache.get(cacheKey);
         if (cached) return deserializeData(cached, typePrefixes);
 
-        const result = await context.$queryRawUnsafe(sql);
+        let queryPromise: Promise<any> | undefined;
+        if (useDeduplication) {
+          if (!promiseCache[cacheKey])
+            promiseCache[cacheKey] = context.$queryRawUnsafe(sql);
+          queryPromise = promiseCache[cacheKey];
+        } else queryPromise = context.$queryRawUnsafe(sql);
+        const result = await queryPromise.finally(
+          () => delete promiseCache[cacheKey],
+        );
         if (useUncache) await processUncache(result);
 
         await cache.set(
@@ -273,7 +292,15 @@ export default ({
             if (cached) return deserializeData(cached, typePrefixes);
           }
 
-          const result = await query(queryArgs);
+          let queryPromise: Promise<any> | undefined;
+          if (useDeduplication) {
+            if (!promiseCache[cacheKey])
+              promiseCache[cacheKey] = query(queryArgs);
+            queryPromise = promiseCache[cacheKey];
+          } else queryPromise = query(queryArgs);
+          const result = await queryPromise.finally(
+            () => delete promiseCache[cacheKey],
+          );
           if (useUncache) await processUncache(result);
           if (useAutoUncache && isWriteOperation) await processAutoUncache();
 
