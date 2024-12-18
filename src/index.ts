@@ -12,7 +12,7 @@ import {
   createKey,
   getInvolvedModels,
 } from "./methods";
-import { Prisma } from "@prisma/client";
+import { Prisma as InternalPrisma } from "@prisma/client";
 import { createHash } from "crypto";
 
 const promiseCache: { [key: string]: Promise<any> } = {};
@@ -25,15 +25,25 @@ export default ({
   prisma,
   typePrefixes,
 }: PrismaExtensionCacheConfig) => {
+  if (prisma && !prisma.defineExtension)
+    throw new Error(
+      'Prisma object is invalid. Please provide a valid Prisma object by using the following: import { Prisma } from "@prisma/client"',
+    );
+
+  const Prisma: typeof InternalPrisma =
+    (prisma as unknown as typeof InternalPrisma) || InternalPrisma;
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
+    model: {
+      $allModels: {} as ModelExtension,
+    },
     client: {
       $cache: cache,
       async $queryRawCached(
         sql: ReturnType<typeof Prisma.sql>,
         cacheOption?: PrismaQueryCacheArgs,
       ) {
-        const context = (prisma || Prisma).getExtensionContext(this);
+        const context = Prisma.getExtensionContext(this);
 
         const processUncache = async (result: any) => {
           const option = cacheOption?.uncache as any;
@@ -104,7 +114,7 @@ export default ({
         sql: string,
         cacheOption?: PrismaQueryCacheArgs,
       ) {
-        const context = (prisma || Prisma).getExtensionContext(this);
+        const context = Prisma.getExtensionContext(this);
 
         const processUncache = async (result: any) => {
           const option = cacheOption?.uncache as any;
@@ -170,9 +180,6 @@ export default ({
         return result;
       },
     },
-    model: {
-      $allModels: {} as ModelExtension,
-    },
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
@@ -213,12 +220,7 @@ export default ({
 
           const processAutoUncache = async () => {
             const keysToDelete: string[] = [];
-            const models = getInvolvedModels(
-              prisma ?? Prisma,
-              model,
-              operation,
-              args,
-            );
+            const models = getInvolvedModels(Prisma, model, operation, args);
 
             await Promise.all(
               models.map((model) =>

@@ -167,8 +167,9 @@ test("cacheExtension", { only: true }, async (t) => {
     const d3: typeof d2 = deserializeData((await cache.get(key))!);
     await testCache();
     assert(d3);
-    assert.deepEqual(d1, d2);
-    assert.deepEqual(d1, d3);
+    assert.deepEqual(d1, d2); // check that the output is the same, as in direct
+    assert.deepEqual(d2, d3); // check if the output of the 2nd method is the same as manualy parsing it
+    assert.deepEqual(d1, d3); // check if the output of the 1st method is the same as manualy parsing it
   });
 
   await t.test("key generation", async () => {

@@ -160,11 +160,13 @@ export type PrismaExtensionCacheConfig = {
    */
   useAutoUncache?: boolean;
   /**
-   * prisma typings from a custom client other than *@prisma/client*.
+   * If you are using a custom client please provide the prisma typings from the defined output of the generator other than *@prisma/client*.
    *
-   * You may have to use ```{ prisma: Prisma as typeof Prisma }```
+   * import { Prisma } from "@prisma/client";
    */
-  prisma?: typeof Prisma;
+  prisma?: {
+    defineExtension: any;
+  };
   /**
    * prefixes for custom cache rewrites. you can customize those prefixes for cases where you experience overlaps
    */
@@ -173,5 +175,8 @@ export type PrismaExtensionCacheConfig = {
     BigInt?: string;
     Date?: string;
     Buffer?: string;
+    Uint8Array?: string;
+    Uint16Array?: string;
+    Uint32Array?: string;
   };
 };
