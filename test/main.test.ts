@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Metrics } from "@prisma/client/runtime/library";
-import { createCache } from 'cache-manager';
-import { Keyv } from 'keyv';
+import { createCache } from "cache-manager";
+import { Keyv } from "keyv";
 import assert from "node:assert";
 import test from "node:test";
 import cacheExtension from "../src";
@@ -21,7 +21,9 @@ test("cacheExtension", { only: true }, async (t) => {
     stores: [keyv],
   });
   async function getCacheSize(): Promise<number> {
-    return store.query(`SELECT COUNT(*) as count FROM ${store.opts.table};`).then(([res]: { count: number }[]) => res.count);
+    return store
+      .query(`SELECT COUNT(*) as count FROM ${store.opts.table};`)
+      .then(([res]: { count: number }[]) => res.count);
   }
   async function getCacheData() {
     return store.query(`SELECT * FROM ${store.opts.table};`);
@@ -55,11 +57,22 @@ test("cacheExtension", { only: true }, async (t) => {
   });
 
   const testCache = async () => {
-    const [qq, cc, data] = await Promise.all([queries(), getCacheSize(), getCacheData()]);
-    if (qq !== q || cc !== c)
-      console.log(data);
-    assert.equal(qq, q, `invalid count of queries performed - expected: ${q} performed: ${qq}`);
-    assert.equal(cc, c, `invalid cache entries - expected: ${c} existing: ${cc}`);
+    const [qq, cc, data] = await Promise.all([
+      queries(),
+      getCacheSize(),
+      getCacheData(),
+    ]);
+    if (qq !== q || cc !== c) console.log(data);
+    assert.equal(
+      qq,
+      q,
+      `invalid count of queries performed - expected: ${q} performed: ${qq}`,
+    );
+    assert.equal(
+      cc,
+      c,
+      `invalid cache entries - expected: ${c} existing: ${cc}`,
+    );
   };
 
   // clear table
@@ -113,10 +126,10 @@ test("cacheExtension", { only: true }, async (t) => {
   // t.runOnly(true);
 
   await t.test("basic caching i/o", async () => {
-    await cache.set("test", 'test');
-    const data = await cache.get('test')
-    assert(data === 'test', `Cache returned invalid Data: ${data}`);
-  })
+    await cache.set("test", "test");
+    const data = await cache.get("test");
+    assert(data === "test", `Cache returned invalid Data: ${data}`);
+  });
 
   await t.test("every read model operation", async () => {
     const useCache = { cache: true } as const;
@@ -321,7 +334,7 @@ test("cacheExtension", { only: true }, async (t) => {
     const ttl = 400;
     await prisma.user.count({
       cache: {
-        key: 'test',
+        key: "test",
         ttl,
       },
     });
@@ -330,7 +343,7 @@ test("cacheExtension", { only: true }, async (t) => {
     await testCache();
     await sleep(ttl);
     c--;
-    await cache.get('test'); // keyv only refreshs cache, when its accessed => in prod this would happen with the prisma request
+    await cache.get("test"); // keyv only refreshs cache, when its accessed => in prod this would happen with the prisma request
     await testCache();
   });
 

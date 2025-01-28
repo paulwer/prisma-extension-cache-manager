@@ -31,8 +31,8 @@ export default ({
     );
 
   async function safeDelete(keys: string[]) {
-    for (const store of cache.stores) for (const key of keys)
-      await store.delete(key); // Delete the key from each store
+    for (const store of cache.stores)
+      for (const key of keys) await store.delete(key); // Delete the key from each store
   }
 
   const Prisma: typeof InternalPrisma =
@@ -230,11 +230,12 @@ export default ({
             await Promise.all(
               models.map((model) =>
                 (async () => {
-                  for (const store of cache.stores) if (store?.iterator) {
-                    for await (const [key] of store.iterator({})) {
-                      if (key.includes(`:${model}:`)) keysToDelete.push(key)
+                  for (const store of cache.stores)
+                    if (store?.iterator) {
+                      for await (const [key] of store.iterator({})) {
+                        if (key.includes(`:${model}:`)) keysToDelete.push(key);
+                      }
                     }
-                  }
                 })(),
               ),
             );
@@ -289,11 +290,11 @@ export default ({
               : cacheOption.key
                 ? createKey(cacheOption.key, cacheOption.namespace)
                 : generateComposedKey({
-                  model,
-                  operation,
-                  namespace: cacheOption.namespace,
-                  queryArgs,
-                });
+                    model,
+                    operation,
+                    namespace: cacheOption.namespace,
+                    queryArgs,
+                  });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);
