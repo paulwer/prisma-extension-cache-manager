@@ -30,6 +30,11 @@ export default ({
       'Prisma object is invalid. Please provide a valid Prisma object by using the following: import { Prisma } from "@prisma/client"',
     );
 
+  async function safeDelete(keys: string[]) {
+    for (const store of cache.stores) for (const key of keys)
+      await store.delete(key); // Delete the key from each store
+  }
+
   const Prisma: typeof InternalPrisma =
     (prisma as unknown as typeof InternalPrisma) || InternalPrisma;
   return Prisma.defineExtension({
@@ -64,7 +69,7 @@ export default ({
             }
           }
 
-          if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+          if (keysToDelete.length) await safeDelete(keysToDelete);
         };
 
         const useUncache =
@@ -135,7 +140,7 @@ export default ({
             }
           }
 
-          if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+          if (keysToDelete.length) await safeDelete(keysToDelete);
         };
 
         const useUncache =
@@ -215,7 +220,7 @@ export default ({
               }
             }
 
-            if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+            if (keysToDelete.length) await safeDelete(keysToDelete);
           };
 
           const processAutoUncache = async () => {
@@ -225,15 +230,16 @@ export default ({
             await Promise.all(
               models.map((model) =>
                 (async () => {
-                  const keys = await cache.store.keys(`*:${model}:*`);
-                  keysToDelete.push(
-                    ...keys.filter((key) => key.includes(`:${model}:`)),
-                  ); // some backends may not support patter matching
+                  for (const store of cache.stores) if (store?.iterator) {
+                    for await (const [key] of store.iterator({})) {
+                      if (key.includes(`:${model}:`)) keysToDelete.push(key)
+                    }
+                  }
                 })(),
               ),
             );
 
-            await cache.store.mdel(...keysToDelete);
+            await safeDelete(keysToDelete);
           };
 
           const useCache =
@@ -283,11 +289,11 @@ export default ({
               : cacheOption.key
                 ? createKey(cacheOption.key, cacheOption.namespace)
                 : generateComposedKey({
-                    model,
-                    operation,
-                    namespace: cacheOption.namespace,
-                    queryArgs,
-                  });
+                  model,
+                  operation,
+                  namespace: cacheOption.namespace,
+                  queryArgs,
+                });
 
           if (!isWriteOperation) {
             const cached = await cache.get(cacheKey);
