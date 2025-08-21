@@ -13,6 +13,7 @@ export const CACHE_OPERATIONS = [
   "groupBy",
   "create",
   "createMany",
+  "createManyAndReturn",
   "updateMany",
   "update",
   "upsert",
@@ -34,6 +35,7 @@ export const READ_OPERATIONS = [
 export const WRITE_OPERATIONS = [
   "create",
   "createMany",
+  "createManyAndReturn",
   "updateMany",
   "upsert",
   "update",
@@ -48,6 +50,7 @@ export const REQUIRED_ARGS_OPERATIONS = [
   "groupBy",
   "create",
   "createMany",
+  "createManyAndReturn",
   "updateMany",
   "update",
   "upsert",

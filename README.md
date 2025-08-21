@@ -140,9 +140,9 @@ This plugin serialize/deserialize some classes used by prisma to string with a p
 
 ## Limitations & Important Considderations
 
-1. Be carefull when using custom cache-keys and automatic-uncaching. If you produce an overlay it could happen, that more cache entries gets deleted than exspected.
-2. Automatic Uncaching only works when using @prisma/client. Custom generated client which are loaded from another origin/package are not supported yet.
-3. when using custom key generator functions, you cannot rely on a cache for this function. those should only be used to generate the cache for other functions.
+1. Be carefull when using custom cache-keys and automatic-uncaching. If you produce an overlay it could happen, that more cache entries gets deleted than expected.
+2. Automatic Uncaching only works when using @prisma/client. For custom clients, you have to provide the current instance in the settings.
+3. when using custom key generator functions, you cannot rely on a cache for this function. Those should only be used to generate the cache for other functions.
 
 ## Credit
 
