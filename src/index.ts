@@ -81,7 +81,7 @@ export default ({
           typeof cacheOption?.cache === "number"
             ? cacheOption?.cache
             : typeof cacheOption?.cache === "object"
-              ? cacheOption?.cache?.ttl ?? defaultTTL
+              ? (cacheOption?.cache?.ttl ?? defaultTTL)
               : defaultTTL;
 
         const cacheKey = generateComposedKey({
@@ -152,7 +152,7 @@ export default ({
           typeof cacheOption?.cache === "number"
             ? cacheOption?.cache
             : typeof cacheOption?.cache === "object"
-              ? cacheOption?.cache?.ttl ?? defaultTTL
+              ? (cacheOption?.cache?.ttl ?? defaultTTL)
               : defaultTTL;
 
         const cacheKey = generateComposedKey({
@@ -258,7 +258,7 @@ export default ({
             typeof cacheOption === "number"
               ? cacheOption
               : typeof cacheOption === "object"
-                ? cacheOption.ttl ?? defaultTTL
+                ? (cacheOption.ttl ?? defaultTTL)
                 : defaultTTL;
 
           if (!useCache) {
