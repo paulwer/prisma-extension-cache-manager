@@ -12,25 +12,43 @@ import {
   createKey,
   getInvolvedModels,
 } from "./methods";
-import { Prisma } from "@prisma/client";
+import { Prisma as InternalPrisma } from "@prisma/client";
 import { createHash } from "crypto";
+
+const promiseCache: { [key: string]: Promise<any> } = {};
 
 export default ({
   cache,
   defaultTTL,
   useAutoUncache,
+  useDeduplication,
   prisma,
   typePrefixes,
 }: PrismaExtensionCacheConfig) => {
+  if (prisma && !prisma.defineExtension)
+    throw new Error(
+      'Prisma object is invalid. Please provide a valid Prisma object by using the following: import { Prisma } from "@prisma/client"',
+    );
+
+  async function safeDelete(keys: string[]) {
+    for (const store of cache.stores)
+      for (const key of keys) await store.delete(key); // Delete the key from each store
+  }
+
+  const Prisma: typeof InternalPrisma =
+    (prisma as unknown as typeof InternalPrisma) || InternalPrisma;
   return Prisma.defineExtension({
     name: "prisma-extension-cache-manager",
+    model: {
+      $allModels: {} as ModelExtension,
+    },
     client: {
       $cache: cache,
       async $queryRawCached(
         sql: ReturnType<typeof Prisma.sql>,
         cacheOption?: PrismaQueryCacheArgs,
       ) {
-        const context = (prisma || Prisma).getExtensionContext(this);
+        const context = Prisma.getExtensionContext(this);
 
         const processUncache = async (result: any) => {
           const option = cacheOption?.uncache as any;
@@ -51,7 +69,7 @@ export default ({
             }
           }
 
-          if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+          if (keysToDelete.length) await safeDelete(keysToDelete);
         };
 
         const useUncache =
@@ -77,7 +95,15 @@ export default ({
         const cached = await cache.get(cacheKey);
         if (cached) return deserializeData(cached, typePrefixes);
 
-        const result = await context.$queryRaw(sql);
+        let queryPromise: Promise<any> | undefined;
+        if (useDeduplication) {
+          if (!promiseCache[cacheKey])
+            promiseCache[cacheKey] = context.$queryRaw(sql);
+          queryPromise = promiseCache[cacheKey];
+        } else queryPromise = context.$queryRaw(sql);
+        const result = await queryPromise.finally(
+          () => delete promiseCache[cacheKey],
+        );
         if (useUncache) await processUncache(result);
 
         await cache.set(
@@ -93,7 +119,7 @@ export default ({
         sql: string,
         cacheOption?: PrismaQueryCacheArgs,
       ) {
-        const context = (prisma || Prisma).getExtensionContext(this);
+        const context = Prisma.getExtensionContext(this);
 
         const processUncache = async (result: any) => {
           const option = cacheOption?.uncache as any;
@@ -114,7 +140,7 @@ export default ({
             }
           }
 
-          if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+          if (keysToDelete.length) await safeDelete(keysToDelete);
         };
 
         const useUncache =
@@ -138,7 +164,15 @@ export default ({
         const cached = await cache.get(cacheKey);
         if (cached) return deserializeData(cached, typePrefixes);
 
-        const result = await context.$queryRawUnsafe(sql);
+        let queryPromise: Promise<any> | undefined;
+        if (useDeduplication) {
+          if (!promiseCache[cacheKey])
+            promiseCache[cacheKey] = context.$queryRawUnsafe(sql);
+          queryPromise = promiseCache[cacheKey];
+        } else queryPromise = context.$queryRawUnsafe(sql);
+        const result = await queryPromise.finally(
+          () => delete promiseCache[cacheKey],
+        );
         if (useUncache) await processUncache(result);
 
         await cache.set(
@@ -150,9 +184,6 @@ export default ({
 
         return result;
       },
-    },
-    model: {
-      $allModels: {} as ModelExtension,
     },
     query: {
       $allModels: {
@@ -189,30 +220,27 @@ export default ({
               }
             }
 
-            if (keysToDelete.length) await cache.store.mdel(...keysToDelete);
+            if (keysToDelete.length) await safeDelete(keysToDelete);
           };
 
           const processAutoUncache = async () => {
             const keysToDelete: string[] = [];
-            const models = getInvolvedModels(
-              prisma ?? Prisma,
-              model,
-              operation,
-              args,
-            );
+            const models = getInvolvedModels(Prisma, model, operation, args);
 
             await Promise.all(
               models.map((model) =>
                 (async () => {
-                  const keys = await cache.store.keys(`*:${model}:*`);
-                  keysToDelete.push(
-                    ...keys.filter((key) => key.includes(`:${model}:`)),
-                  ); // some backends may not support patter matching
+                  for (const store of cache.stores)
+                    if (store?.iterator) {
+                      for await (const [key] of store.iterator({})) {
+                        if (key.includes(`:${model}:`)) keysToDelete.push(key);
+                      }
+                    }
                 })(),
               ),
             );
 
-            await cache.store.mdel(...keysToDelete);
+            await safeDelete(keysToDelete);
           };
 
           const useCache =
@@ -273,7 +301,15 @@ export default ({
             if (cached) return deserializeData(cached, typePrefixes);
           }
 
-          const result = await query(queryArgs);
+          let queryPromise: Promise<any> | undefined;
+          if (useDeduplication) {
+            if (!promiseCache[cacheKey])
+              promiseCache[cacheKey] = query(queryArgs);
+            queryPromise = promiseCache[cacheKey];
+          } else queryPromise = query(queryArgs);
+          const result = await queryPromise.finally(
+            () => delete promiseCache[cacheKey],
+          );
           if (useUncache) await processUncache(result);
           if (useAutoUncache && isWriteOperation) await processAutoUncache();
 

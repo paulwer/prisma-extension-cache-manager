@@ -1,19 +1,33 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { Metrics } from "@prisma/client/runtime/library";
-import * as cm from "cache-manager";
+import { createCache } from "cache-manager";
+import { Keyv } from "keyv";
 import assert from "node:assert";
 import test from "node:test";
 import cacheExtension from "../src";
 import { deserializeData, generateComposedKey } from "../src/methods";
 import { OPTIONAL_ARGS_OPERATIONS, READ_OPERATIONS } from "../src/types";
+import KeyvSqlite from "@keyv/sqlite";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 test("cacheExtension", { only: true }, async (t) => {
-  const defaultTtl = 100;
-  const cache = await cm.caching("memory", {
+  const defaultTtl = 1000;
+
+  const store = new KeyvSqlite();
+  const keyv = new Keyv<KeyvSqlite>({ store });
+  const cache = createCache({
     ttl: defaultTtl,
+    stores: [keyv],
   });
+  async function getCacheSize(): Promise<number> {
+    return store
+      .query(`SELECT COUNT(*) as count FROM ${store.opts.table};`)
+      .then(([res]: { count: number }[]) => res.count);
+  }
+  async function getCacheData() {
+    return store.query(`SELECT * FROM ${store.opts.table};`);
+  }
 
   // regenerate client to reset metrics
   let useClientWithAutomaticUncache = false;
@@ -37,17 +51,30 @@ test("cacheExtension", { only: true }, async (t) => {
   // reset client and cache before each test
   t.beforeEach(async () => {
     prisma = getClient();
-    await cache.reset();
+    await cache.clear();
     q = 0;
     c = 0;
   });
 
   const testCache = async () => {
-    const qq = await queries();
-    const cc = cache.store.size;
-    assert.equal(qq, q, `queries mismatch: ${(qq || 0) - q}`);
-    assert.equal(cc, c, `cache mismatch: ${cc - c}`);
+    const [qq, cc, data] = await Promise.all([
+      queries(),
+      getCacheSize(),
+      getCacheData(),
+    ]);
+    if (qq !== q || cc !== c) console.log(data);
+    assert.equal(
+      qq,
+      q,
+      `invalid count of queries performed - expected: ${q} performed: ${qq}`,
+    );
+    assert.equal(
+      cc,
+      c,
+      `invalid cache entries - expected: ${c} existing: ${cc}`,
+    );
   };
+
   // clear table
   const reset = async () => {
     await prisma.user.deleteMany();
@@ -97,6 +124,12 @@ test("cacheExtension", { only: true }, async (t) => {
   } satisfies Prisma.UserFindManyArgs;
 
   // t.runOnly(true);
+
+  await t.test("basic caching i/o", async () => {
+    await cache.set("test", "test");
+    const data = await cache.get("test");
+    assert(data === "test", `Cache returned invalid Data: ${data}`);
+  });
 
   await t.test("every read model operation", async () => {
     const useCache = { cache: true } as const;
@@ -167,8 +200,9 @@ test("cacheExtension", { only: true }, async (t) => {
     const d3: typeof d2 = deserializeData((await cache.get(key))!);
     await testCache();
     assert(d3);
-    assert.deepEqual(d1, d2);
-    assert.deepEqual(d1, d3);
+    assert.deepEqual(d1, d2); // check that the output is the same, as in direct
+    assert.deepEqual(d2, d3); // check if the output of the 2nd method is the same as manualy parsing it
+    assert.deepEqual(d1, d3); // check if the output of the 1st method is the same as manualy parsing it
   });
 
   await t.test("key generation", async () => {
@@ -299,13 +333,17 @@ test("cacheExtension", { only: true }, async (t) => {
   await t.test("expired ttl should should not have cache", async () => {
     const ttl = 400;
     await prisma.user.count({
-      cache: ttl,
+      cache: {
+        key: "test",
+        ttl,
+      },
     });
     q++;
     c++;
     await testCache();
     await sleep(ttl);
     c--;
+    await cache.get("test"); // keyv only refreshs cache, when its accessed => in prod this would happen with the prisma request
     await testCache();
   });
 
@@ -592,4 +630,5 @@ test("cacheExtension", { only: true }, async (t) => {
     },
   );
   t.todo("additional tests for queryRawCached should be implemented");
+  t.todo("additional tests for deduplication");
 });
