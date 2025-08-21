@@ -119,7 +119,7 @@ export function getInvolvedModels(
     operation == "updateMany"
   )
     checkInvolvedModels(modelName, args.data);
-  else if (operation == "createMany")
+  else if (operation == "createMany" || operation == "createManyAndReturn")
     [args.data].flat().map((row: any) => checkInvolvedModels(modelName, row));
   else if (operation == "upsert" && args.create)
     checkInvolvedModels(modelName, args.create);
